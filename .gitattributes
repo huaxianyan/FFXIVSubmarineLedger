@@ -1,0 +1,9 @@
+# 文本文件统一按 LF 存与检出，避免 Windows 上的 autocrlf 把脚本改成 CRLF。
+* text=auto eol=lf
+
+# 二进制资源不做行尾转换。
+*.png binary
+*.jpg binary
+*.ico binary
+*.pgm binary
+*.zip binary

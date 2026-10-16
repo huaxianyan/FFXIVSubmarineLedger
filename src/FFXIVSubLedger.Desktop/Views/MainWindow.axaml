@@ -1,0 +1,113 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
+        xmlns:views="clr-namespace:FFXIVSubLedger.Desktop.Views"
+        x:Class="FFXIVSubLedger.Desktop.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="FFXIV 潜艇收益统计"
+        Width="1200"
+        Height="800"
+        MinWidth="960"
+        MinHeight="640">
+
+    <Window.Styles>
+        <Style Selector="TextBlock.page-title">
+            <Setter Property="FontSize" Value="28" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="TextBlock.section-title">
+            <Setter Property="FontSize" Value="18" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+        <Style Selector="Border.card">
+            <Setter Property="Padding" Value="18" />
+            <Setter Property="CornerRadius" Value="10" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="#40808080" />
+            <Setter Property="Background" Value="#0A808080" />
+        </Style>
+        <Style Selector="Button.nav">
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,11" />
+            <Setter Property="Margin" Value="0,2" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="FontSize" Value="14" />
+        </Style>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Background" Value="#16808080" />
+        </Style>
+        <Style Selector="Button.nav.active">
+            <Setter Property="Background" Value="#285B8DEF" />
+            <Setter Property="FontWeight" Value="SemiBold" />
+        </Style>
+    </Window.Styles>
+
+    <Grid ColumnDefinitions="220,*" RowDefinitions="*,Auto">
+        <Border Grid.RowSpan="2" Background="#0E808080"
+                BorderBrush="#40808080" BorderThickness="0,0,1,0">
+            <Grid Margin="16" RowDefinitions="Auto,Auto,*,Auto">
+                <StackPanel Margin="8,10,8,22" Spacing="4">
+                    <TextBlock FontSize="19" FontWeight="SemiBold" Text="潜艇收益" />
+                    <TextBlock FontSize="12" Opacity="0.6" Text="Sub Ledger" />
+                </StackPanel>
+
+                <StackPanel Grid.Row="1">
+                    <Button Classes.nav="True" Classes.active="{Binding IsRecordsPage}"
+                            Command="{Binding ShowRecordsCommand}" Content="收艇记账" />
+                    <Button Classes.nav="True" Classes.active="{Binding IsStatisticsPage}"
+                            Command="{Binding ShowStatisticsCommand}" Content="收益统计" />
+                    <Button Classes.nav="True" Classes.active="{Binding IsCharactersPage}"
+                            Command="{Binding ShowCharactersCommand}" Content="角色管理" />
+                    <Button Classes.nav="True" Classes.active="{Binding IsSettingsPage}"
+                            Command="{Binding ShowSettingsCommand}" Content="设置" />
+                </StackPanel>
+
+                <Border Grid.Row="3" Classes="card" Padding="12">
+                    <StackPanel Spacing="5">
+                        <TextBlock FontSize="12" FontWeight="SemiBold" Text="当前状态" />
+                        <TextBlock FontSize="11" Opacity="0.65" TextWrapping="Wrap"
+                                   MaxLines="4" Text="{Binding StatusMessage}" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" RowDefinitions="Auto,*">
+            <Border Padding="28,20" BorderBrush="#40808080" BorderThickness="0,0,0,1">
+                <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="3">
+                        <TextBlock Classes="page-title" Text="{Binding PageTitle}" />
+                        <TextBlock Opacity="0.65" Text="{Binding PageSubtitle}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                                VerticalAlignment="Center">
+                        <ProgressBar Width="90" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
+                        <Button Command="{Binding RefreshCommand}" Content="刷新" />
+                    </StackPanel>
+                </Grid>
+            </Border>
+
+            <Panel Grid.Row="1" IsVisible="{Binding IsRecordsPage}">
+                <views:RecordsPageView DataContext="{Binding Records}" />
+            </Panel>
+            <Panel Grid.Row="1" IsVisible="{Binding IsStatisticsPage}">
+                <views:RoadmapPageView DataContext="{Binding Statistics}" />
+            </Panel>
+            <Panel Grid.Row="1" IsVisible="{Binding IsCharactersPage}">
+                <views:CharacterManagerView DataContext="{Binding Characters}" />
+            </Panel>
+            <Panel Grid.Row="1" IsVisible="{Binding IsSettingsPage}">
+                <views:RoadmapPageView DataContext="{Binding Settings}" />
+            </Panel>
+        </Grid>
+
+        <Border Grid.Row="1" Grid.Column="1" Padding="28,10" BorderBrush="#40808080"
+                BorderThickness="0,1,0,0">
+            <TextBlock FontSize="12" Opacity="0.65"
+                       Text="识别与记账都在本机完成，不联网、不上传截图。" />
+        </Border>
+    </Grid>
+</Window>

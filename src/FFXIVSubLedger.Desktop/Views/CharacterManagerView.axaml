@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
+             x:Class="FFXIVSubLedger.Desktop.Views.CharacterManagerView"
+             x:DataType="vm:CharacterManagerViewModel">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28" Spacing="14">
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#0A808080">
+                <StackPanel Spacing="12">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="添加角色" />
+                    <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                               Text="收艇收益会记在角色名下。只有一个角色时自动归属；有多个时，识别完成后会让你选一个。" />
+                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+                        <TextBox PlaceholderText="角色名" Text="{Binding NewName}" />
+                        <TextBox Grid.Column="1" PlaceholderText="服务器（可留空）" Text="{Binding NewWorld}" />
+                        <Button Grid.Column="2" Classes="accent" Content="添加角色"
+                                Command="{Binding AddCommand}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Padding="14" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080"
+                    IsVisible="{Binding HasStatus}">
+                <TextBlock FontSize="12" Opacity="0.75" TextWrapping="Wrap"
+                           Text="{Binding StatusMessage}" />
+            </Border>
+
+            <Grid Margin="0,4,0,0" ColumnDefinitions="*,Auto">
+                <TextBlock FontSize="18" FontWeight="SemiBold" Text="角色列表" />
+                <TextBlock Grid.Column="1" VerticalAlignment="Center" FontSize="12" Opacity="0.65"
+                           Text="{Binding CountLabel}" />
+            </Grid>
+
+            <Border Padding="28" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080"
+                    IsVisible="{Binding !HasCharacters}">
+                <StackPanel HorizontalAlignment="Center" Spacing="6">
+                    <TextBlock FontSize="15" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               Text="还没有角色" />
+                    <TextBlock FontSize="12" Opacity="0.65" HorizontalAlignment="Center"
+                               Text="先在上面添加一个角色，收艇收益才有地方归属。" />
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding Rows}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CharacterRowViewModel">
+                        <Border Margin="0,0,0,8" Padding="18,14" CornerRadius="10"
+                                BorderThickness="1" BorderBrush="#40808080" Background="#0A808080">
+                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                                               Text="{Binding Name}" />
+                                    <Border CornerRadius="4" Padding="7,2" Background="#285B8DEF"
+                                            VerticalAlignment="Center" IsVisible="{Binding IsDefault}">
+                                        <TextBlock FontSize="11" Text="默认" />
+                                    </Border>
+                                    <Border CornerRadius="4" Padding="7,2" Background="#1A808080"
+                                            VerticalAlignment="Center" IsVisible="{Binding IsInactive}">
+                                        <TextBlock FontSize="11" Opacity="0.8" Text="已停用" />
+                                    </Border>
+                                </StackPanel>
+
+                                <TextBlock Grid.Row="1" FontSize="12" Opacity="0.65"
+                                           Text="{Binding WorldLabel}" />
+
+                                <StackPanel Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
+                                            Spacing="8" VerticalAlignment="Center">
+                                    <Button Content="设为默认" Command="{Binding SetDefaultCommand}"
+                                            IsVisible="{Binding CanSetDefault}" />
+                                    <Button Content="{Binding ToggleLabel}"
+                                            Command="{Binding ToggleActiveCommand}" />
+                                    <Button Content="删除" Command="{Binding DeleteCommand}" />
+                                </StackPanel>
+                            </Grid>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

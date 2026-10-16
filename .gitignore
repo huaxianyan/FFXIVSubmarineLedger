@@ -1,0 +1,43 @@
+# .NET build output
+**/bin/
+**/obj/
+artifacts/
+dist/
+
+# IDE and user state
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.lnk
+
+# Test and coverage output
+TestResults/
+coverage/
+*.coverage
+*.coveragexml
+
+# Packages and publish output
+*.nupkg
+*.snupkg
+publish/
+
+# Logs and local application data
+*.log
+logs/
+.local/
+
+# Local agent workspace data
+.workbuddy-ai/
+
+# Analysis script scratch output
+tools/out/
+__pycache__/
+
+# OS metadata
+.DS_Store
+Thumbs.db
+Desktop.ini

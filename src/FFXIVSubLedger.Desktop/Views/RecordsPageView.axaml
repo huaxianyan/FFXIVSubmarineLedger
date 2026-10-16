@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
+             x:Class="FFXIVSubLedger.Desktop.Views.RecordsPageView"
+             x:DataType="vm:RecordsPageViewModel"
+             DragDrop.AllowDrop="True"
+             Background="Transparent">
+
+    <UserControl.Styles>
+        <!-- 有截图以后拖放区收窄，把纵向空间让给下面的预览和切分结果。 -->
+        <Style Selector="Grid.dropzone">
+            <Setter Property="MinHeight" Value="230" />
+        </Style>
+        <Style Selector="Grid.dropzone.compact">
+            <Setter Property="MinHeight" Value="0" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" Background="Transparent">
+        <StackPanel Margin="28" Spacing="14" Background="Transparent">
+
+            <!-- 拖放区：整页都能接收拖入，这块只是把落点画出来 -->
+            <Grid Classes="dropzone" Classes.compact="{Binding HasImage}">
+                <Rectangle RadiusX="10" RadiusY="10" Stroke="#55808080" StrokeThickness="1"
+                           StrokeDashArray="6,4" Fill="#10808080"
+                           IsVisible="{Binding !IsDragOver}" />
+                <Rectangle RadiusX="10" RadiusY="10" Stroke="#5B8DEF" StrokeThickness="1.5"
+                           StrokeDashArray="6,4" Fill="#285B8DEF"
+                           IsVisible="{Binding IsDragOver}" />
+
+                <StackPanel Margin="24,18" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="10">
+                    <Path Width="38" Height="38" HorizontalAlignment="Center"
+                          IsVisible="{Binding !HasImage}"
+                          Data="M12,3 L12,15 M7,10 L12,15 L17,10 M4,19 L20,19"
+                          Stroke="#5B8DEF" StrokeThickness="1.6"
+                          StrokeLineCap="Round" StrokeJoin="Round" Stretch="Uniform" />
+                    <TextBlock FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               IsVisible="{Binding !HasImage}" Text="把收艇截图拖到这里" />
+                    <TextBlock FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
+                               IsVisible="{Binding HasImage}" Text="再拖一张就替换掉当前这张" />
+                    <TextBlock FontSize="12" Opacity="0.65" HorizontalAlignment="Center"
+                               TextAlignment="Center" TextWrapping="Wrap" MaxWidth="460"
+                               IsVisible="{Binding !HasImage}"
+                               Text="截图里只要有背包区域的图标就行。也可以直接 Ctrl + V 粘贴，或者用下面的按钮。" />
+                    <StackPanel Margin="0,4,0,0" Orientation="Horizontal" Spacing="10"
+                                HorizontalAlignment="Center">
+                        <Button Classes="accent" Content="读取剪贴板"
+                                Command="{Binding ReadClipboardCommand}" />
+                        <Button Content="选择图片文件" Command="{Binding PickFileCommand}" />
+                        <Button Content="从游戏窗口截图" IsEnabled="False"
+                                ToolTip.Tip="计划中：收完艇按一下全局热键直接抓图，不用先存文件。" />
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <Border Padding="16" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080">
+                <StackPanel Spacing="8">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                        <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="收益记入" />
+                        <TextBlock Grid.Column="1" FontSize="13" TextWrapping="Wrap"
+                                   Text="{Binding TargetCharacterLabel}" />
+                    </Grid>
+                    <TextBlock FontSize="12" Opacity="0.72" TextWrapping="Wrap"
+                               IsVisible="{Binding HasStatus}" Text="{Binding StatusMessage}" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#0A808080"
+                    IsVisible="{Binding HasImage}">
+                <StackPanel Spacing="12">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"
+                                       Text="本次截图" />
+                            <Border CornerRadius="4" Padding="7,2" Background="#285B8DEF"
+                                    VerticalAlignment="Center">
+                                <TextBlock FontSize="11" Text="{Binding SourceLabel}" />
+                            </Border>
+                            <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center"
+                                       Text="{Binding ImageInfo}" />
+                        </StackPanel>
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                                    VerticalAlignment="Center">
+                            <CheckBox IsChecked="{Binding ShowOverlay}"
+                                      IsEnabled="{Binding HasDetection}" Content="显示网格" />
+                            <Button Content="清除" Command="{Binding ClearCommand}" />
+                        </StackPanel>
+                    </Grid>
+
+                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="#40808080" Background="#07808080"
+                            IsVisible="{Binding HasDetection}">
+                        <StackPanel Spacing="6">
+                            <TextBlock FontSize="13" FontWeight="SemiBold"
+                                       Text="{Binding DetectionSummary}" />
+                            <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                                       Text="{Binding DetectionHint}" />
+                            <TextBlock FontSize="11" Opacity="0.55" TextWrapping="Wrap"
+                                       Text="竖线画成红色、横线画成青色；被压暗的格子判为空位，不参与识别。" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border x:Name="PreviewPanel" Padding="10" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="#40808080" Background="#20808080"
+                            HorizontalAlignment="Center">
+                        <Image Source="{Binding Preview}" Stretch="Uniform" MaxHeight="360" />
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <!-- 三张引导卡只在还没图的时候露出来：有图了就不需要再讲怎么把图弄进来。 -->
+            <Grid Margin="0,4,0,0" ColumnDefinitions="*,*,*" ColumnSpacing="14"
+                  IsVisible="{Binding !HasImage}">
+                <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                        BorderBrush="#40808080" Background="#0A808080">
+                    <StackPanel Spacing="6">
+                        <TextBlock FontSize="15" FontWeight="SemiBold" Text="Ctrl + V" />
+                        <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                                   Text="截图工具复制之后，在本页任意位置按 Ctrl + V 即可。" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Padding="18" CornerRadius="10" BorderThickness="1"
+                        BorderBrush="#40808080" Background="#0A808080">
+                    <StackPanel Spacing="6">
+                        <TextBlock FontSize="15" FontWeight="SemiBold" Text="拖进来" />
+                        <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                                   Text="把图片文件从资源管理器直接拖到上面的框里。" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Padding="18" CornerRadius="10" BorderThickness="1"
+                        BorderBrush="#40808080" Background="#0A808080">
+                    <StackPanel Spacing="6">
+                        <TextBlock FontSize="15" FontWeight="SemiBold" Opacity="0.6"
+                                   Text="全局热键（计划中）" />
+                        <TextBlock FontSize="12" Opacity="0.5" TextWrapping="Wrap"
+                                   Text="收完艇按一下热键直接抓图，连截图工具都不用开。" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080">
+                <TextBlock FontSize="12" Opacity="0.62" TextWrapping="Wrap"
+                           Text="网格切分已完成，图标识别与计价是下一步（M3）。识别全程在本机进行，不联网、不上传截图；价格用游戏里定的卖店价，不需要查市场行情。" />
+            </Border>
+
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>
