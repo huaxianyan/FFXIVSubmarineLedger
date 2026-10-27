@@ -26,6 +26,8 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 
 **统计页已完成**：总收益 / 日均 / 月均 / 年均四张指标卡、收益走势图（日/月可切，自绘折线）、道具占比、角色占比、已入账记录列表（可逐条删除）、导出 CSV（一行一条明细，带 BOM 以避 Excel 乱码）。日均按自然日跨度算，不剔除没记录的日子。
 
+**可以直接读聊天框了**：点「直接读聊天框」，从游戏客户端里拿聊天文本，不再走截图与 OCR，因此不会出现认错字或漏掉 HQ 标记的问题。需要以管理员身份运行；读不到时截图识别仍可用。实测一次读到 409 行真实聊天内容。
+
 **设置页已完成**：显示数据目录与数据库位置、一键打开目录、JSON 备份导出与导入（导入整体替换，替换前自动备份当前数据）、显示掉落表条数与路径。
 
 下一步是发布（单文件打包、GitHub Release、自动更新）与维度对比。
@@ -39,7 +41,7 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 - **语言分开做**：日志行模板与物名都随客户端语言变，每语言一个解析器加一份词表，日语先行。
 - **不假设截图对齐**：不要求固定窗口尺寸或固定截取范围，行位置从图像内容里算。
 - **日志窗口没有底板**：文字直接压在游戏画面上，二值化必须按行带自适应——实测背景亮度能从 8 跳到 180。
-- **不触碰游戏**：不注入进程、不读写游戏内存、不解析游戏 DAT 文件。
+- **不触碰游戏**：不注入进程、不自动操作游戏、不解析游戏 DAT 文件。可选地从聊天框直接读文本（进程外只读），那样能避开 OCR 误识，但需要以管理员身份运行。
 - **多种取图方式**：不强制用户先存成文件，剪贴板与拖放是主路径。
 
 ## 技术栈
@@ -48,6 +50,7 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 - Avalonia UI 12 + CommunityToolkit.Mvvm
 - SQLite（Microsoft.Data.Sqlite）
 - Tesseract 5（日文 OCR，模型随程序分发）
+- Sharlayan（进程外读取游戏聊天框，MIT）
 - xUnit
 
 ## 目录结构
@@ -160,6 +163,7 @@ FFXIVSubLedger.exe --dump-lines <图片> <输出.txt>
 
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)（Apache-2.0），通过 NuGet 包 `Tesseract` 引入。
 - [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 的日文模型 `jpn.traineddata`（Apache-2.0），位于 `src/FFXIVSubLedger.Desktop/Data/tessdata/`。
+- [Sharlayan](https://github.com/FFXIVAPP/sharlayan)（MIT），用于进程外读取游戏聊天框文本；它内置 FFXIVClientStructs（MIT）与 Lumina（MIT）。
 
 OCR 引擎与模型都是随程序分发的，不依赖用户系统里装没装 OCR 组件或日文语言包。
 

@@ -21,6 +21,12 @@ internal static class Program
             return;
         }
 
+        if (DumpChatCommand.TryParse(args, out string chatOutput))
+        {
+            DumpChatCommand.Run(chatOutput);
+            return;
+        }
+
         BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
     }
 

@@ -90,7 +90,11 @@ public static class JapaneseLogLineParser
             break;
         }
 
-        rest = DropActorPrefix(rest);
+        // 必须能找到「<角色名>は」这个分隔：真实聊天记录里还有「〜の景品として、…を入手しました。」
+        // 这类没有主语的行，它们不是收艇收益，不能当成入手记录。
+        if (!TryDropActorPrefix(rest, out rest))
+            return false;
+
         rest = rest.TrimStart(LinkMarkers.ToCharArray());
 
         if (rest.Length == 0)
@@ -100,8 +104,8 @@ public static class JapaneseLogLineParser
         return true;
     }
 
-    /// <summary>去掉时间戳与「角色名は」，只留物名起的部分。</summary>
-    private static string DropActorPrefix(string text)
+    /// <summary>去掉时间戳与「角色名は」，只留物名起的部分。找不到「は」时返回 false。</summary>
+    private static bool TryDropActorPrefix(string text, out string rest)
     {
         int start = 0;
 
@@ -114,10 +118,20 @@ public static class JapaneseLogLineParser
 
         int limit = Math.Min(text.Length, start + ActorNameLimit);
         if (limit <= start)
-            return text[start..];
+        {
+            rest = string.Empty;
+            return false;
+        }
 
         int actorEnd = text.IndexOf('は', start, limit - start);
-        return actorEnd < 0 ? text[start..] : text[(actorEnd + 1)..];
+        if (actorEnd < 0)
+        {
+            rest = string.Empty;
+            return false;
+        }
+
+        rest = text[(actorEnd + 1)..];
+        return true;
     }
 
     private static string StripWhitespace(string text)

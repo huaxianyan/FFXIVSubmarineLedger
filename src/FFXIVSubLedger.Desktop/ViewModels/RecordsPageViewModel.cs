@@ -12,6 +12,7 @@ using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Desktop.Services;
 using FFXIVSubLedger.Infrastructure.Catalog;
 using FFXIVSubLedger.Infrastructure.Parsing;
+using FFXIVSubLedger.Platform.Windows.GameChat;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
@@ -25,6 +26,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     private readonly ILootRecordRepository _records;
     private readonly Lazy<ItemCatalog> _catalog;
     private readonly OcrService _ocr = new();
+    private readonly SharlayanChatReader _chat = new();
 
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
@@ -336,15 +338,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
             IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog.Value);
 
-            LootRows.Clear();
-            foreach (RecognizedLoot entry in loot)
-            {
-                LootRowViewModel row = new(entry);
-                row.PropertyChanged += OnLootRowChanged;
-                LootRows.Add(row);
-            }
-
-            RefreshLootTotals();
+            ReplaceRows(loot);
 
             StatusMessage = loot.Count == 0
                 ? "没认出入手行。这段日志里可能没有收艇记录。"
@@ -371,6 +365,64 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             if (generation == _recognizeGeneration)
                 IsRecognizing = false;
         }
+    }
+
+    /// <summary>
+    /// 直接从游戏聊天框读一遍。读到的文本是游戏自己的渲染结果，
+    /// 不会出现 OCR 那种认错字或漏掉 HQ 标记的问题；读不到时仍可退回截图识别。
+    /// </summary>
+    [RelayCommand]
+    private async Task ReadChatLogAsync()
+    {
+        IsRecognizing = true;
+
+        try
+        {
+            if (!_chat.TryAttach(out string message))
+            {
+                StatusMessage = message;
+                return;
+            }
+
+            IReadOnlyList<string> lines = await Task.Run(_chat.ReadNewLines).ConfigureAwait(true);
+
+            if (lines.Count == 0)
+            {
+                StatusMessage = "聊天框里没有新内容。先收艇，让入手记录出现在聊天框里再读。";
+                return;
+            }
+
+            IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(lines, _catalog.Value);
+
+            OcrText = string.Join(Environment.NewLine, lines);
+            OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容");
+            ReplaceRows(loot);
+
+            StatusMessage = loot.Count == 0
+                ? "聊天内容里没有入手记录。确认收艇日志还在聊天框里。"
+                : "逐行核对数量与品质，确认后写账。";
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            StatusMessage = $"读聊天框失败：{exception.Message}";
+        }
+        finally
+        {
+            IsRecognizing = false;
+        }
+    }
+
+    private void ReplaceRows(IReadOnlyList<RecognizedLoot> loot)
+    {
+        LootRows.Clear();
+        foreach (RecognizedLoot entry in loot)
+        {
+            LootRowViewModel row = new(entry);
+            row.PropertyChanged += OnLootRowChanged;
+            LootRows.Add(row);
+        }
+
+        RefreshLootTotals();
     }
 
     private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLootTotals();

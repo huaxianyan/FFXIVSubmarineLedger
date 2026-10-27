@@ -5,7 +5,9 @@ namespace FFXIVSubLedger.Domain.Tests.Recognition;
 public sealed class JapaneseLogLineParserTests
 {
     [Theory]
-    // 这几条抄的是真实 OCR 输出，符号都被读歪了，看的正是这种输入。
+    // 这两条来自真实聊天框的内存读取结果（角色名已替换）。它们没有截图里的 ▶ 标记，
+    // 「×」也更接近半角，解析器要两种都吃得下。
+    [InlineData("[16:11] テストさんは転送網利用券:蒼天街×10を入手した。", "転送網利用券:蒼天街", 10)]
     [InlineData("[11:40] テストさんは p沈没船の高級首飾りX5を入手した。", "沈没船の高級首飾り", 5)]
     [InlineData("[11:40] テストさんは p海産油脂X 3を入手した。", "海産油脂", 3)]
     [InlineData("[11:41] テストさんは pルビー※ 30を入手した。", "ルビー", 30)]
@@ -37,6 +39,8 @@ public sealed class JapaneseLogLineParserTests
     [InlineData("[11:40] pシャーク級艦尾を修理しました")]
     [InlineData("[11:40] 潜水艦「テスト」が出港しました")]
     [InlineData("[11:40] テストさんは p沈没船の指輪を入手した。")]
+    // 真实聊天记录里这种没有主语的景品行不能被当成收益。
+    [InlineData("[16:09] クポフォーチュンの景品として、マジックプリズム:フォルタン×10を入手しました。")]
     [InlineData("")]
     public void TryParse_IgnoresLinesThatAreNotLoot(string line)
     {

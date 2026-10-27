@@ -44,14 +44,14 @@
                     <TextBlock FontSize="12" Opacity="0.65" HorizontalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" MaxWidth="460"
                                IsVisible="{Binding !HasImage}"
-                               Text="截图里只要有背包区域的图标就行。也可以直接 Ctrl + V 粘贴，或者用下面的按钮。" />
+                               Text="截图里只要有收艇的聊天记录就行。也可以直接 Ctrl + V 粘贴，或者从游戏客户端里直接读聊天框。" />
                     <StackPanel Margin="0,4,0,0" Orientation="Horizontal" Spacing="10"
                                 HorizontalAlignment="Center">
                         <Button Classes="accent" Content="读取剪贴板"
                                 Command="{Binding ReadClipboardCommand}" />
                         <Button Content="选择图片文件" Command="{Binding PickFileCommand}" />
-                        <Button Content="从游戏窗口截图" IsEnabled="False"
-                                ToolTip.Tip="计划中：收完艇按一下全局热键直接抓图，不用先存文件。" />
+                        <Button Content="直接读聊天框" Command="{Binding ReadChatLogCommand}"
+                                ToolTip.Tip="从游戏客户端里直接读聊天内容，不需要截图。需要以管理员身份运行本程序。" />
                     </StackPanel>
                 </StackPanel>
             </Grid>
