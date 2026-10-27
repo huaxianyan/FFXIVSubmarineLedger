@@ -75,6 +75,16 @@ dotnet test FFXIVSubLedger.sln
 dotnet run --project src/FFXIVSubLedger.Desktop
 ```
 
+打一个可分发的包：
+
+```powershell
+powershell -File tools/publish.ps1
+```
+
+产物是 `artifacts/FFXIVSubLedger-<版本>.zip` 与同名 `.sha256`。自包含发布，目标机器不需要装 .NET。
+
+**不用单文件发布**：Tesseract 的本地库加载器靠当前程序位置拼路径，单文件打包后那是空值，启动即崩。这一点已实测确认。
+
 ## 界面
 
 窗口框架沿用同作者的 [FFXIVConfigManager](https://github.com/huaxianyan/FFXIVConfigManager)：
