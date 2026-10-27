@@ -38,8 +38,13 @@ internal static class DumpChatCommand
 
         IReadOnlyList<string> lines = reader.ReadNewLines();
 
+        // 紧接着再读一次：用来确认读取器给的是「增量」还是「把整段历史重放一遍」。
+        // 增量则第二轮应接近 0；重放则第二轮与第一轮几乎一样多。
+        Thread.Sleep(1000);
+        IReadOnlyList<string> second = reader.ReadNewLines();
+
         text.AppendLine(CultureInfo.InvariantCulture, $"已连接 {reader.IsAttached}");
-        text.AppendLine(CultureInfo.InvariantCulture, $"行数 {lines.Count}");
+        text.AppendLine(CultureInfo.InvariantCulture, $"首轮 {lines.Count} 行 / 第二轮 {second.Count} 行");
 
         foreach (string line in lines)
             text.AppendLine(line);

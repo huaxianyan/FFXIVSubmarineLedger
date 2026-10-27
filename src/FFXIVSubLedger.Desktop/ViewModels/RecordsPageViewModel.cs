@@ -31,6 +31,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
 
+    /// <summary>已处理过的聊天行，用于去重（同一句话可能合法地出现多次）。</summary>
+    private readonly LineDeduplicator _deduplicator = new();
+
+    private CancellationTokenSource? _watchCancellation;
+
+    /// <summary>自动监听的轮询间隔。3 秒足够跟上收艇节奏，也不会把 CPU 拉起来。</summary>
+    private static readonly TimeSpan WatchInterval = TimeSpan.FromSeconds(3);
+
     public RecordsPageViewModel(
         Func<TopLevel?> topLevelProvider,
         CharacterManagerViewModel characters,
@@ -91,6 +99,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     [ObservableProperty]
     private bool _isRecognizing;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(WatchButtonLabel))]
+    private bool _isWatching;
+
+    public string WatchButtonLabel => IsWatching ? "停止监听" : "自动监听";
 
     /// <summary>认出的入手记录，逐行可改数量与品质，取消勾选就不入账。</summary>
     public ObservableCollection<LootRowViewModel> LootRows { get; } = [];
@@ -368,6 +382,98 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     }
 
     /// <summary>
+    /// 开关自动监听。打开后每 3 秒读一次新聊天，一旦出现入手行就自动加进本次账。
+    ///
+    /// 游戏里的聊天框是固定 1000 条的环形表，所以「先收完艇、再开程序」也能补读——
+    /// 只要这中间没有刷出 1000 条新聊天把它顶掉。
+    ///
+    /// 命令本身是同步的：监听循环在后台跑，否则 async 命令执行期间按钮会被禁用，想停都停不了。
+    /// </summary>
+    [RelayCommand]
+    private void ToggleWatch()
+    {
+        if (IsWatching)
+        {
+            _watchCancellation?.Cancel();
+            return;
+        }
+
+        if (!_chat.TryAttach(out string message))
+        {
+            StatusMessage = message;
+            return;
+        }
+
+        _watchCancellation = new CancellationTokenSource();
+        IsWatching = true;
+        StatusMessage = "正在监听聊天框…";
+
+        _ = WatchLoopAsync(_watchCancellation.Token);
+    }
+
+    private async Task WatchLoopAsync(CancellationToken token)
+    {
+        try
+        {
+            while (!token.IsCancellationRequested)
+            {
+                IReadOnlyList<string> lines = await Task.Run(_chat.ReadNewLines, token).ConfigureAwait(true);
+
+                if (lines.Count > 0)
+                    MergeChatLines(lines);
+
+                await Task.Delay(WatchInterval, token).ConfigureAwait(true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 用户点了停止，正常退出。
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            StatusMessage = $"监听中断：{exception.Message}";
+        }
+        finally
+        {
+            _watchCancellation?.Dispose();
+            _watchCancellation = null;
+            IsWatching = false;
+            StatusMessage = StatusMessage.StartsWith("正在监听", StringComparison.Ordinal)
+                ? "已停止监听。"
+                : StatusMessage;
+        }
+    }
+
+    /// <summary>
+    /// 把新读到的聊天行并进本次账。
+    ///
+    /// 读取器每次调用都会把整段累计历史再给一遍（实测第二轮与首轮同为 624 行），
+    /// 所以必须去重；去重按「同一句话的出现次数」算，因为同一种道具分两行入包时
+    /// 日志里就是两条一模一样的行，第二条也是真收益。
+    /// </summary>
+    private int MergeChatLines(IReadOnlyList<string> lines)
+    {
+        IReadOnlyList<string> fresh = _deduplicator.TakeNew(lines);
+        if (fresh.Count == 0)
+            return 0;
+
+        IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(fresh, _catalog.Value);
+        if (loot.Count == 0)
+            return 0;
+
+        // 只追加，不清空：用户可能已经改过前面几行的数量或品质。
+        foreach (RecognizedLoot entry in loot)
+        {
+            LootRowViewModel row = new(entry);
+            row.PropertyChanged += OnLootRowChanged;
+            LootRows.Add(row);
+        }
+
+        RefreshLootTotals();
+        return loot.Count;
+    }
+
+    /// <summary>
     /// 直接从游戏聊天框读一遍。读到的文本是游戏自己的渲染结果，
     /// 不会出现 OCR 那种认错字或漏掉 HQ 标记的问题；读不到时仍可退回截图识别。
     /// </summary>
@@ -392,14 +498,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 return;
             }
 
-            IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(lines, _catalog.Value);
-
             OcrText = string.Join(Environment.NewLine, lines);
             OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容");
-            ReplaceRows(loot);
 
-            StatusMessage = loot.Count == 0
-                ? "聊天内容里没有入手记录。确认收艇日志还在聊天框里。"
+            int added = MergeChatLines(lines);
+            StatusMessage = added == 0
+                ? "聊天内容里没有新的入手记录。"
                 : "逐行核对数量与品质，确认后写账。";
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
