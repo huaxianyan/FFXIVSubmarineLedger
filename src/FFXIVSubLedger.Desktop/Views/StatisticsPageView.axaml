@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
+             xmlns:controls="clr-namespace:FFXIVSubLedger.Desktop.Controls"
              x:Class="FFXIVSubLedger.Desktop.Views.StatisticsPageView"
              x:DataType="vm:StatisticsPageViewModel"
              x:CompileBindings="True">
@@ -44,6 +45,15 @@
             <Border Padding="16" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#07808080">
                 <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap" Text="{Binding SpanLabel}" />
+            </Border>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#0A808080"
+                    IsVisible="{Binding HasRecords}">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="每日收益走势" />
+                    <controls:TrendChart Height="170" Series="{Binding Trend}" />
+                </StackPanel>
             </Border>
 
             <Border Padding="18" CornerRadius="10" BorderThickness="1"

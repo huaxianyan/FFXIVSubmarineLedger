@@ -43,6 +43,10 @@ public sealed partial class StatisticsPageViewModel(
     [NotifyPropertyChangedFor(nameof(IsEmpty))]
     private bool _isLoaded;
 
+    /// <summary>每日收益走势。</summary>
+    [ObservableProperty]
+    private TrendSeries? _trend;
+
     public bool HasRecords => Records.Count > 0;
 
     public bool IsEmpty => IsLoaded && Records.Count == 0;
@@ -72,6 +76,8 @@ public sealed partial class StatisticsPageViewModel(
         Items.Clear();
         foreach (LootStatisticsItem item in stats.ItemsByValue)
             Items.Add(new ItemShareRowViewModel(item));
+
+        Trend = LootTrend.Compute(all, TrendGranularity.Day);
 
         Records.Clear();
         foreach (LootRecord record in all)
