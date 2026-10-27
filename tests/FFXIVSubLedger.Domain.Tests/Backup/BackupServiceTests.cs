@@ -28,7 +28,7 @@ public sealed class BackupServiceTests : IDisposable
         Assert.Equal(1, summary.Characters);
         Assert.Equal(1, summary.Records);
         Assert.Equal(2, summary.Items);
-        Assert.Contains("\"Version\": 1", await File.ReadAllTextAsync(path), StringComparison.Ordinal);
+        Assert.Contains("\"Version\": 2", await File.ReadAllTextAsync(path), StringComparison.Ordinal);
     }
 
     [Fact]
@@ -38,7 +38,7 @@ public sealed class BackupServiceTests : IDisposable
         await File.WriteAllTextAsync(
             path,
             """
-            { "Version": 99, "ExportedAt": "2026-10-27T00:00:00+09:00", "Characters": [], "FreeCompanies": [], "Records": [] }
+            { "Version": 99, "ExportedAt": "2026-10-27T00:00:00+09:00", "Characters": [], "FreeCompanies": [], "Submarines": [], "Records": [] }
             """);
 
         ValidationException error = await Assert.ThrowsAsync<ValidationException>(
@@ -56,15 +56,17 @@ public sealed class BackupServiceTests : IDisposable
             path,
             """
             {
-              "Version": 1,
+              "Version": 2,
               "ExportedAt": "2026-10-27T00:00:00+09:00",
               "Characters": [],
               "FreeCompanies": [],
+              "Submarines": [],
               "Records": [
                 {
                   "Id": "22222222-2222-2222-2222-222222222222",
                   "CharacterId": "33333333-3333-3333-3333-333333333333",
                   "FreeCompanyId": null,
+                  "SubmarineId": null,
                   "Date": "2026-10-27",
                   "CreatedAt": "2026-10-27T12:00:00+09:00",
                   "Note": "",
@@ -108,6 +110,8 @@ public sealed class BackupServiceTests : IDisposable
     {
         private static readonly Guid CharacterId = Guid.Parse("11111111-1111-1111-1111-111111111111");
 
+        private static readonly Guid SubmarineId = Guid.Parse("44444444-4444-4444-4444-444444444444");
+
         public bool Imported { get; private set; }
 
         public Task<BackupDocument> ExportAsync(CancellationToken ct = default) => Task.FromResult(
@@ -116,11 +120,13 @@ public sealed class BackupServiceTests : IDisposable
                 new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.FromHours(9)),
                 [new BackupCharacter(CharacterId, "Alice", "红玉海", true, true, DateTimeOffset.Now)],
                 [],
+                [new BackupSubmarine(SubmarineId, CharacterId, "Strawberry", DateTimeOffset.Now)],
                 [
                     new BackupLootRecord(
                         Guid.Parse("22222222-2222-2222-2222-222222222222"),
                         CharacterId,
                         null,
+                        SubmarineId,
                         new DateOnly(2026, 10, 27),
                         DateTimeOffset.Now,
                         string.Empty,

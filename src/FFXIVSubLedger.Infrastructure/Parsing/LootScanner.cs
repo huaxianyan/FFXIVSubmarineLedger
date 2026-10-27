@@ -13,6 +13,7 @@ namespace FFXIVSubLedger.Infrastructure.Parsing;
 /// <param name="Quantity">数量。</param>
 /// <param name="IsHighQuality">是否 HQ。乘以 HQ 价的依据。</param>
 /// <param name="UnitPrice">单位卖店价。没命中时为 0，等用户补。</param>
+/// <param name="SubmarineName">这批收益属于哪艘艇。日志里没等到「探索完了」行为 null。</param>
 public sealed record RecognizedLoot(
     int LineNumber,
     string ItemText,
@@ -22,7 +23,8 @@ public sealed record RecognizedLoot(
     uint ItemId,
     int Quantity,
     bool IsHighQuality,
-    int UnitPrice)
+    int UnitPrice,
+    string? SubmarineName)
 {
     public bool IsKnown => Item is not null;
 
@@ -45,17 +47,42 @@ public static class LootScanner
 
         var results = new List<RecognizedLoot>();
 
+        // 日志里艇名在收益行之后，所以先把入手行攒着，遇到「探索完了」再一起结算归属。
+        var pending = new List<(int LineNumber, LootLine Parsed)>();
+
         for (int index = 0; index < lines.Count; index++)
         {
-            if (!JapaneseLogLineParser.TryParse(lines[index], out LootLine parsed))
+            if (JapaneseLogLineParser.TryParseSubmarineReturn(lines[index], out string submarineName))
+            {
+                Flush(pending, submarineName, catalog, results);
+                pending.Clear();
                 continue;
+            }
 
+            if (JapaneseLogLineParser.TryParse(lines[index], out LootLine parsed))
+                pending.Add((index + 1, parsed));
+        }
+
+        // 整段读完还有没等到归属的，也照样给出来，归属留空由用户判断。
+        Flush(pending, submarineName: null, catalog, results);
+
+        return results;
+    }
+
+    private static void Flush(
+        List<(int LineNumber, LootLine Parsed)> pending,
+        string? submarineName,
+        ItemCatalog catalog,
+        List<RecognizedLoot> results)
+    {
+        foreach ((int lineNumber, LootLine parsed) in pending)
+        {
             ItemMatch match = ItemMatcher.Match(parsed.ItemText, catalog.Entries);
 
             if (match.Item is not { } item)
             {
                 results.Add(new RecognizedLoot(
-                    index + 1,
+                    lineNumber,
                     parsed.ItemText,
                     null,
                     [],
@@ -63,7 +90,8 @@ public static class LootScanner
                     0,
                     parsed.Quantity,
                     false,
-                    0));
+                    0,
+                    submarineName));
                 continue;
             }
 
@@ -71,7 +99,7 @@ public static class LootScanner
             bool highQuality = parsed.LooksHighQuality && item.CanBeHq;
 
             results.Add(new RecognizedLoot(
-                index + 1,
+                lineNumber,
                 parsed.ItemText,
                 item,
                 match.Candidates,
@@ -79,9 +107,8 @@ public static class LootScanner
                 item.ItemId,
                 parsed.Quantity,
                 highQuality,
-                ShopPrice.For(item.ShopPriceNq, highQuality)));
+                ShopPrice.For(item.ShopPriceNq, highQuality),
+                submarineName));
         }
-
-        return results;
     }
 }

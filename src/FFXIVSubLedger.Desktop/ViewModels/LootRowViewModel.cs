@@ -18,6 +18,7 @@ public sealed partial class LootRowViewModel : ObservableObject
     {
         LineNumber = loot.LineNumber;
         ItemText = loot.ItemText;
+        SubmarineName = loot.SubmarineName;
         _candidates = loot.Candidates;
         SelectedItem = loot.Item;
         _quantity = loot.Quantity;
@@ -28,6 +29,9 @@ public sealed partial class LootRowViewModel : ObservableObject
 
     public int LineNumber { get; }
 
+    /// <summary>这批收益属于哪艘艇。日志里没等到「探索完了」行时为 null。</summary>
+    public string? SubmarineName { get; }
+
     /// <summary>OCR 读出的原始物名。没命中词表时靠它判断。</summary>
     public string ItemText { get; }
 
@@ -35,6 +39,8 @@ public sealed partial class LootRowViewModel : ObservableObject
     public IReadOnlyList<LootCatalogEntry> Candidates => _candidates;
 
     public bool HasCandidateChoice => _candidates.Count > 1;
+
+    public string SubmarineLabel => SubmarineName is { Length: > 0 } name ? name : "未标明艇";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemName))]

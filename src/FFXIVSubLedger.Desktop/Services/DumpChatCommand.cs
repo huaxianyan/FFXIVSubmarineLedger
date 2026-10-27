@@ -8,7 +8,7 @@ namespace FFXIVSubLedger.Desktop.Services;
 /// <summary>
 /// 开发期命令：从游戏聊天框读一遍内容写成文本，用来核对真实行格式。
 ///
-/// 用法：`FFXIVSubLedger.exe --dump-chat &lt;输出.txt&gt;`（需以管理员身份运行）。
+/// 用法：`FFXIVSubLedger.exe --dump-chat &lt;输出.txt&gt;`（权限需与游戏同级）。
 /// </summary>
 internal static class DumpChatCommand
 {
@@ -57,10 +57,11 @@ internal static class DumpChatCommand
         foreach (RecognizedLoot entry in loot)
         {
             string name = entry.IsHighQuality ? $"{entry.ItemName}(HQ)" : entry.ItemName;
+            string submarine = entry.SubmarineName is { Length: > 0 } sub ? $"[{sub}] " : "[未标明艇] ";
             string suffix = entry.IsKnown ? string.Empty : "  [未命中词表]";
             text.AppendLine(
                 CultureInfo.InvariantCulture,
-                $"#{entry.LineNumber:00} {name} ×{entry.Quantity} @{entry.UnitPrice} = {entry.Subtotal}{suffix}");
+                $"#{entry.LineNumber:00} {submarine}{name} ×{entry.Quantity} @{entry.UnitPrice} = {entry.Subtotal}{suffix}");
         }
 
         File.WriteAllText(outputPath, text.ToString());

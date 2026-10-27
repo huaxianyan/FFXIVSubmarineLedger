@@ -17,6 +17,7 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
 
         List<BackupCharacter> characters = ReadCharacters(connection);
         List<BackupFreeCompany> freeCompanies = ReadFreeCompanies(connection);
+        List<BackupSubmarine> submarines = ReadSubmarines(connection);
         List<BackupLootRecord> records = ReadRecords(connection);
 
         return Task.FromResult(new BackupDocument(
@@ -24,6 +25,7 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
             DateTimeOffset.Now,
             characters,
             freeCompanies,
+            submarines,
             records));
     }
 
@@ -39,6 +41,7 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
             // 子表先删，避免外键与残留行挡住。
             Execute(connection, transaction, "DELETE FROM loot_items;");
             Execute(connection, transaction, "DELETE FROM loot_records;");
+            Execute(connection, transaction, "DELETE FROM submarines;");
             Execute(connection, transaction, "DELETE FROM free_companies;");
             Execute(connection, transaction, "DELETE FROM characters;");
 
@@ -47,6 +50,9 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
 
             foreach (BackupFreeCompany company in document.FreeCompanies)
                 InsertFreeCompany(connection, transaction, company);
+
+            foreach (BackupSubmarine submarine in document.Submarines)
+                InsertSubmarine(connection, transaction, submarine);
 
             foreach (BackupLootRecord record in document.Records)
                 InsertRecord(connection, transaction, record);
@@ -112,12 +118,36 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
         return result;
     }
 
+    private static List<BackupSubmarine> ReadSubmarines(SqliteConnection connection)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.CommandText =
+            """
+            SELECT id, character_id, name, created_at
+              FROM submarines
+             ORDER BY name;
+            """;
+
+        var result = new List<BackupSubmarine>();
+        using SqliteDataReader reader = command.ExecuteReader();
+        while (reader.Read())
+        {
+            result.Add(new BackupSubmarine(
+                Guid.Parse(reader.GetString(0)),
+                Guid.Parse(reader.GetString(1)),
+                reader.GetString(2),
+                DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture)));
+        }
+
+        return result;
+    }
+
     private static List<BackupLootRecord> ReadRecords(SqliteConnection connection)
     {
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, character_id, free_company_id, date, created_at, note
+            SELECT id, character_id, free_company_id, submarine_id, date, created_at, note
               FROM loot_records
              ORDER BY date, created_at;
             """;
@@ -132,9 +162,10 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
                 id,
                 Guid.Parse(reader.GetString(1)),
                 reader.IsDBNull(2) ? null : Guid.Parse(reader.GetString(2)),
-                DateOnly.ParseExact(reader.GetString(3), "yyyy-MM-dd", CultureInfo.InvariantCulture),
-                DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
-                reader.GetString(5),
+                reader.IsDBNull(3) ? null : Guid.Parse(reader.GetString(3)),
+                DateOnly.ParseExact(reader.GetString(4), "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                DateTimeOffset.Parse(reader.GetString(5), CultureInfo.InvariantCulture),
+                reader.GetString(6),
                 ReadItems(connection, id)));
         }
 
@@ -203,6 +234,22 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
         command.ExecuteNonQuery();
     }
 
+    private static void InsertSubmarine(SqliteConnection connection, SqliteTransaction transaction, BackupSubmarine submarine)
+    {
+        using SqliteCommand command = connection.CreateCommand();
+        command.Transaction = transaction;
+        command.CommandText =
+            """
+            INSERT INTO submarines (id, character_id, name, created_at)
+            VALUES ($id, $character, $name, $created);
+            """;
+        command.Parameters.AddWithValue("$id", submarine.Id.ToString());
+        command.Parameters.AddWithValue("$character", submarine.CharacterId.ToString());
+        command.Parameters.AddWithValue("$name", submarine.Name);
+        command.Parameters.AddWithValue("$created", submarine.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
+        command.ExecuteNonQuery();
+    }
+
     private static void InsertRecord(SqliteConnection connection, SqliteTransaction transaction, BackupLootRecord record)
     {
         using (SqliteCommand command = connection.CreateCommand())
@@ -210,12 +257,13 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
             command.Transaction = transaction;
             command.CommandText =
                 """
-                INSERT INTO loot_records (id, character_id, free_company_id, date, created_at, note)
-                VALUES ($id, $character, $company, $date, $created, $note);
+                INSERT INTO loot_records (id, character_id, free_company_id, submarine_id, date, created_at, note)
+                VALUES ($id, $character, $company, $submarine, $date, $created, $note);
                 """;
             command.Parameters.AddWithValue("$id", record.Id.ToString());
             command.Parameters.AddWithValue("$character", record.CharacterId.ToString());
             command.Parameters.AddWithValue("$company", record.FreeCompanyId is { } company ? company.ToString() : DBNull.Value);
+            command.Parameters.AddWithValue("$submarine", record.SubmarineId is { } submarine ? submarine.ToString() : DBNull.Value);
             command.Parameters.AddWithValue("$date", record.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$created", record.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$note", record.Note);

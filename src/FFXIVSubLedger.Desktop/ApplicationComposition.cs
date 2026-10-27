@@ -22,6 +22,7 @@ public sealed class ApplicationComposition
         Characters = new CharacterService(characterRepository);
         Settings = new SettingsService(settingsStore);
         Records = new SqliteLootRecordRepository(database);
+        Submarines = new SqliteSubmarineRepository(database);
         Backup = new BackupService(new SqliteBackupStore(database));
 
         // 词表只在真要用时读，读不到也不至于开不了程序。
@@ -39,6 +40,8 @@ public sealed class ApplicationComposition
     public SettingsService Settings { get; }
 
     public ILootRecordRepository Records { get; }
+
+    public ISubmarineRepository Submarines { get; }
 
     public BackupService Backup { get; }
 

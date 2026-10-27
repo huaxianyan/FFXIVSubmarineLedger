@@ -13,8 +13,8 @@ namespace FFXIVSubLedger.Platform.Windows.GameChat;
 /// 走 Sharlayan（MIT）的进程外内存读取，不注入。它把聊天框缓冲区里的行按时间顺序取出来，
 /// 拿到的是游戏自己渲染的文本，所以不会出现 OCR 那种认错字的问题。
 ///
-/// **必须管理员权限**：FFXIV 的反篡改机制会拦住非提升进程的 PROCESS_VM_READ，
-/// 失败时错误信息里会写清楚，由界面原样展示。
+/// **权限与游戏同级即可**：FFXIV 的反篡改机制会拦住跨完整性级别的 PROCESS_VM_READ。
+/// 游戏普通权限运行时，本程序也普通权限就能读（实测如此）；只有游戏自己提权时才需要提权。
 /// </summary>
 public sealed class SharlayanChatReader : IDisposable
 {
@@ -77,7 +77,8 @@ public sealed class SharlayanChatReader : IDisposable
             catch (Exception exception)
             {
                 _handler = null;
-                message = $"连不上游戏聊天框：{exception.Message}。读取聊天内容需要以管理员身份运行本程序。";
+                message = $"连不上游戏聊天框：{exception.Message}。"
+                    + "游戏以管理员身份运行时，本程序也要以管理员身份运行才能读。";
                 return false;
             }
         }

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Microsoft.Data.Sqlite;
 
 namespace FFXIVSubLedger.Infrastructure.Persistence;
@@ -40,6 +41,25 @@ public sealed class SqliteDatabase
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText = Schema;
         command.ExecuteNonQuery();
+
+        // 老库升级：建表语句带 IF NOT EXISTS，加不了列，得单独补。
+        EnsureColumn(connection, "loot_records", "submarine_id", "TEXT NULL");
+    }
+
+    private static void EnsureColumn(SqliteConnection connection, string table, string column, string definition)
+    {
+        using (SqliteCommand check = connection.CreateCommand())
+        {
+            check.CommandText = $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name = $column;";
+            check.Parameters.AddWithValue("$column", column);
+
+            if (Convert.ToInt64(check.ExecuteScalar(), CultureInfo.InvariantCulture) > 0)
+                return;
+        }
+
+        using SqliteCommand alter = connection.CreateCommand();
+        alter.CommandText = $"ALTER TABLE {table} ADD COLUMN {column} {definition};";
+        alter.ExecuteNonQuery();
     }
 
     private const string Schema =
@@ -60,10 +80,20 @@ public sealed class SqliteDatabase
             created_at    TEXT NOT NULL
         );
 
+        CREATE TABLE IF NOT EXISTS submarines (
+            id            TEXT PRIMARY KEY,
+            character_id  TEXT NOT NULL,
+            name          TEXT NOT NULL,
+            created_at    TEXT NOT NULL
+        );
+
+        CREATE UNIQUE INDEX IF NOT EXISTS idx_submarines_character_name ON submarines (character_id, name);
+
         CREATE TABLE IF NOT EXISTS loot_records (
             id               TEXT PRIMARY KEY,
             character_id     TEXT NOT NULL,
             free_company_id  TEXT NULL,
+            submarine_id     TEXT NULL,
             date             TEXT NOT NULL,
             created_at       TEXT NOT NULL,
             note             TEXT NOT NULL DEFAULT ''

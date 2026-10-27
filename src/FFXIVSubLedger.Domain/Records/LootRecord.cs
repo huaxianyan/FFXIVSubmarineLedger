@@ -9,6 +9,9 @@ public sealed class LootRecord
 
     public Guid? FreeCompanyId { get; set; }
 
+    /// <summary>这笔收益属于哪艘艇。没有艇归属的旧记录为 null。</summary>
+    public Guid? SubmarineId { get; set; }
+
     public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Now);
 
     public DateTimeOffset CreatedAt { get; set; } = DateTimeOffset.Now;

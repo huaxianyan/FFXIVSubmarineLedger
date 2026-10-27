@@ -62,13 +62,14 @@ internal static class DumpOcrCommand
         foreach (RecognizedLoot entry in loot)
         {
             string name = entry.IsHighQuality ? $"{entry.ItemName}(HQ)" : entry.ItemName;
+            string submarine = entry.SubmarineName is { Length: > 0 } sub ? $"[{sub}] " : "[未标明艇] ";
             string suffix = entry.IsKnown ? string.Empty : "  [未命中词表]";
             if (entry.IsAmbiguous)
                 suffix += $"  [候选 {entry.Candidates.Count}: {string.Join(" / ", entry.Candidates.Select(x => x.Name))}]";
 
             text.AppendLine(
                 CultureInfo.InvariantCulture,
-                $"#{entry.LineNumber:00} {name} ×{entry.Quantity} @{entry.UnitPrice} = {entry.Subtotal}{suffix}");
+                $"#{entry.LineNumber:00} {submarine}{name} ×{entry.Quantity} @{entry.UnitPrice} = {entry.Subtotal}{suffix}");
         }
 
         text.AppendLine(CultureInfo.InvariantCulture, $"合计 {loot.Sum(x => x.Subtotal)}");

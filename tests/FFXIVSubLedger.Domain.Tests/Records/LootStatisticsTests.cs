@@ -100,6 +100,42 @@ public sealed class LootStatisticsTests
         Assert.Equal(100, stats.ByCharacter.Sum(x => x.SharePercent), precision: 6);
     }
 
+    [Fact]
+    public void Compute_SplitsTotalsBySubmarineAndKeepsUnattributedLoot()
+    {
+        Guid first = Guid.Parse("44444444-4444-4444-4444-444444444441");
+        Guid second = Guid.Parse("44444444-4444-4444-4444-444444444442");
+
+        var records = new List<LootRecord>
+        {
+            new()
+            {
+                Date = new DateOnly(2026, 10, 27),
+                SubmarineId = first,
+                Items = [new LootItem { ItemName = "エメラルド", Quantity = 10, UnitPrice = 2 }],
+            },
+            new()
+            {
+                Date = new DateOnly(2026, 10, 27),
+                SubmarineId = second,
+                Items = [new LootItem { ItemName = "エメラルド", Quantity = 40, UnitPrice = 2 }],
+            },
+            new()
+            {
+                Date = new DateOnly(2026, 10, 27),
+                Items = [new LootItem { ItemName = "エメラルド", Quantity = 5, UnitPrice = 2 }],
+            },
+        };
+
+        LootStatisticsSnapshot stats = LootStatistics.Compute(records);
+
+        Assert.Equal(3, stats.BySubmarine.Count);
+        Assert.Equal(second, stats.BySubmarine[0].SubmarineId);
+        Assert.Equal(80, stats.BySubmarine[0].TotalValue);
+        // 没有艇归属的旧记录也要出现，不能被静默丢掉。
+        Assert.Contains(stats.BySubmarine, x => x.SubmarineId is null && x.TotalValue == 10);
+    }
+
     private static LootRecord Record(DateOnly date, params (string Name, int UnitPrice, int Quantity)[] items)
     {
         return new LootRecord

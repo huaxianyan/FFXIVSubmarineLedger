@@ -69,12 +69,13 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
             command.Transaction = transaction;
             command.CommandText =
                 """
-                INSERT INTO loot_records (id, character_id, free_company_id, date, created_at, note)
-                VALUES ($id, $character, $company, $date, $created, $note);
+                INSERT INTO loot_records (id, character_id, free_company_id, submarine_id, date, created_at, note)
+                VALUES ($id, $character, $company, $submarine, $date, $created, $note);
                 """;
             command.Parameters.AddWithValue("$id", record.Id.ToString());
             command.Parameters.AddWithValue("$character", record.CharacterId.ToString());
             command.Parameters.AddWithValue("$company", (object?)record.FreeCompanyId?.ToString() ?? DBNull.Value);
+            command.Parameters.AddWithValue("$submarine", (object?)record.SubmarineId?.ToString() ?? DBNull.Value);
             command.Parameters.AddWithValue("$date", record.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$created", record.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
             command.Parameters.AddWithValue("$note", record.Note);
@@ -121,7 +122,7 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
         {
             command.CommandText =
                 """
-                SELECT character_id, free_company_id, date, created_at, note
+                SELECT character_id, free_company_id, submarine_id, date, created_at, note
                   FROM loot_records
                  WHERE id = $id;
                 """;
@@ -134,9 +135,10 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
                     Id = id,
                     CharacterId = Guid.Parse(reader.GetString(0)),
                     FreeCompanyId = reader.IsDBNull(1) ? null : Guid.Parse(reader.GetString(1)),
-                    Date = DateOnly.ParseExact(reader.GetString(2), "yyyy-MM-dd", CultureInfo.InvariantCulture),
-                    CreatedAt = DateTimeOffset.Parse(reader.GetString(3), CultureInfo.InvariantCulture),
-                    Note = reader.GetString(4),
+                    SubmarineId = reader.IsDBNull(2) ? null : Guid.Parse(reader.GetString(2)),
+                    Date = DateOnly.ParseExact(reader.GetString(3), "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                    CreatedAt = DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
+                    Note = reader.GetString(5),
                 };
             }
         }

@@ -8,6 +8,39 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="28" Spacing="14">
 
+            <Border Padding="16" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#0A808080">
+                <StackPanel Orientation="Horizontal" Spacing="14">
+                    <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="筛选" />
+
+                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="角色" />
+                    <ComboBox FontSize="12" MinWidth="200"
+                              ItemsSource="{Binding CharacterOptions}"
+                              SelectedItem="{Binding SelectedCharacter}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FilterOption">
+                                <TextBlock FontSize="12" Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="艇" />
+                    <ComboBox FontSize="12" MinWidth="180"
+                              IsEnabled="{Binding CanFilterBySubmarine}"
+                              ItemsSource="{Binding SubmarineOptions}"
+                              SelectedItem="{Binding SelectedSubmarine}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FilterOption">
+                                <TextBlock FontSize="12" Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <TextBlock FontSize="11" Opacity="0.45" VerticalAlignment="Center"
+                               Text="艇名只在角色范围内唯一，所以筛艇要先选角色。" />
+                </StackPanel>
+            </Border>
+
             <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
                 <Border Grid.Column="0" Padding="16" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
@@ -75,6 +108,32 @@
                                 <Grid Margin="0,5" ColumnDefinitions="180,60,*,120" ColumnSpacing="12">
                                     <TextBlock FontSize="12" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" Text="{Binding CharacterName}" />
+                                    <TextBlock Grid.Column="1" FontSize="11" Opacity="0.55" VerticalAlignment="Center"
+                                               Text="{Binding RecordCountLabel}" />
+                                    <ProgressBar Grid.Column="2" Height="6" Minimum="0" Maximum="100"
+                                                 VerticalAlignment="Center" Value="{Binding SharePercent}" />
+                                    <TextBlock Grid.Column="3" FontSize="12" Opacity="0.75"
+                                               HorizontalAlignment="Right" VerticalAlignment="Center"
+                                               Text="{Binding ValueLabel}" />
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#0A808080"
+                    IsVisible="{Binding HasRecords}">
+                <StackPanel Spacing="12">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="按艇占比" />
+
+                    <ItemsControl ItemsSource="{Binding SubmarineShares}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SubmarineShareRowViewModel">
+                                <Grid Margin="0,5" ColumnDefinitions="180,60,*,120" ColumnSpacing="12">
+                                    <TextBlock FontSize="12" VerticalAlignment="Center"
+                                               TextTrimming="CharacterEllipsis" Text="{Binding SubmarineName}" />
                                     <TextBlock Grid.Column="1" FontSize="11" Opacity="0.55" VerticalAlignment="Center"
                                                Text="{Binding RecordCountLabel}" />
                                     <ProgressBar Grid.Column="2" Height="6" Minimum="0" Maximum="100"

@@ -9,8 +9,17 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(ApplicationComposition composition, Func<TopLevel?> topLevelProvider)
     {
         Characters = new CharacterManagerViewModel(composition.Characters);
-        Records = new RecordsPageViewModel(topLevelProvider, Characters, composition.Records, composition.CatalogSource);
-        Statistics = new StatisticsPageViewModel(composition.Records, composition.Characters, topLevelProvider);
+        Records = new RecordsPageViewModel(
+            topLevelProvider,
+            Characters,
+            composition.Records,
+            composition.Submarines,
+            composition.CatalogSource);
+        Statistics = new StatisticsPageViewModel(
+            composition.Records,
+            composition.Submarines,
+            composition.Characters,
+            topLevelProvider);
         Settings = new SettingsPageViewModel(
             topLevelProvider,
             composition.Backup,

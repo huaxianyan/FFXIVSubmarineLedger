@@ -51,7 +51,7 @@
                                 Command="{Binding ReadClipboardCommand}" />
                         <Button Content="选择图片文件" Command="{Binding PickFileCommand}" />
                         <Button Content="直接读聊天框" Command="{Binding ReadChatLogCommand}"
-                                ToolTip.Tip="从游戏客户端里直接读聊天内容，不需要截图。需要以管理员身份运行本程序。" />
+                                ToolTip.Tip="从游戏客户端里直接读聊天内容，不需要截图。权限与游戏同级即可，游戏没提权就不用提权。" />
                         <Button Classes="accent" Content="{Binding WatchButtonLabel}"
                                 Command="{Binding ToggleWatchCommand}"
                                 ToolTip.Tip="打开后每 3 秒读一次新聊天，收完艇自动出账。游戏聊天框是 1000 条的环形表，所以先收完再开程序也能补读。" />

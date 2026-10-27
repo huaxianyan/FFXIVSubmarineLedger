@@ -144,6 +144,68 @@ public sealed class PersistenceSmokeTests : IDisposable
     }
 
     [Fact]
+    public async Task SubmarineAndItsRecordRoundTrip()
+    {
+        SqliteCharacterRepository characters = new(_database);
+        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        await characters.AddAsync(character);
+
+        SqliteSubmarineRepository submarines = new(_database);
+        Submarine submarine = new() { CharacterId = character.Id, Name = "Strawberry" };
+        await submarines.AddAsync(submarine);
+
+        Submarine? found = await submarines.FindByNameAsync(character.Id, "Strawberry");
+        Assert.Equal(submarine.Id, found?.Id);
+        Assert.Single(await submarines.ListAsync(character.Id));
+
+        SqliteLootRecordRepository records = new(_database);
+        LootRecord record = LootRecordFactory.Build(
+            character.Id,
+            new DateOnly(2026, 10, 27),
+            [new LootEntryInput(5189, "エメラルド", 25, true, 3, false)]);
+        record.SubmarineId = submarine.Id;
+        await records.AddAsync(record);
+
+        LootRecord loaded = Assert.Single(await records.ListAsync());
+        Assert.Equal(submarine.Id, loaded.SubmarineId);
+    }
+
+    [Fact]
+    public void Initialize_AddsTheSubmarineColumnToAnOlderDatabase()
+    {
+        // 老版本的库建好了但没有 submarine_id 列；升级后要能自动补上，不能要求用户重建库。
+        string path = Path.Combine(_directory, "legacy.db");
+        SqliteConnection.ClearAllPools();
+
+        using (var legacy = new SqliteConnection($"Data Source={path}"))
+        {
+            legacy.Open();
+            using var command = legacy.CreateCommand();
+            command.CommandText =
+                """
+                CREATE TABLE loot_records (
+                    id               TEXT PRIMARY KEY,
+                    character_id     TEXT NOT NULL,
+                    free_company_id  TEXT NULL,
+                    date             TEXT NOT NULL,
+                    created_at       TEXT NOT NULL,
+                    note             TEXT NOT NULL DEFAULT ''
+                );
+                """;
+            command.ExecuteNonQuery();
+        }
+
+        var upgraded = new SqliteDatabase(path);
+        upgraded.Initialize();
+
+        using SqliteConnection connection = upgraded.Open();
+        using SqliteCommand check = connection.CreateCommand();
+        check.CommandText = "SELECT COUNT(*) FROM pragma_table_info('loot_records') WHERE name = 'submarine_id';";
+
+        Assert.Equal(1L, check.ExecuteScalar());
+    }
+
+    [Fact]
     public async Task DeletingRecordCascadesToItems()
     {
         SqliteCharacterRepository characters = new(_database);

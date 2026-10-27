@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFXIVSubLedger.Application.Abstractions;
 using FFXIVSubLedger.Application.Records;
+using FFXIVSubLedger.Domain.Characters;
 using FFXIVSubLedger.Desktop.Services;
 using FFXIVSubLedger.Infrastructure.Catalog;
 using FFXIVSubLedger.Infrastructure.Parsing;
@@ -24,6 +25,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 {
     private readonly Func<TopLevel?> _topLevelProvider;
     private readonly ILootRecordRepository _records;
+    private readonly ISubmarineRepository _submarines;
     private readonly Lazy<ItemCatalog> _catalog;
     private readonly OcrService _ocr = new();
     private readonly SharlayanChatReader _chat = new();
@@ -43,10 +45,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         Func<TopLevel?> topLevelProvider,
         CharacterManagerViewModel characters,
         ILootRecordRepository records,
+        ISubmarineRepository submarines,
         Lazy<ItemCatalog> catalog)
     {
         _topLevelProvider = topLevelProvider;
         _records = records;
+        _submarines = submarines;
         _catalog = catalog;
         Characters = characters;
 
@@ -570,31 +574,56 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             return;
         }
 
-        List<LootEntryInput> entries =
+        List<LootRowViewModel> included =
         [
-            .. LootRows
-                .Where(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0)
-                .Select(x => x.ToEntry()),
+            .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0),
         ];
 
-        if (entries.Count == 0)
+        if (included.Count == 0)
         {
             StatusMessage = "没有可入账的行。";
             return;
         }
 
+        DateOnly date = DateOnly.FromDateTime(DateTime.Now);
+
         try
         {
-            Domain.Records.LootRecord record = LootRecordFactory.Build(
-                target.Id,
-                DateOnly.FromDateTime(DateTime.Now),
-                entries);
+            int records = 0;
+            int total = 0;
 
-            await _records.AddAsync(record).ConfigureAwait(true);
+            // 一艘艇一笔记录：艇名在日志里是分组凭据，混在一笔里就没法按艇统计了。
+            foreach (IGrouping<string?, LootRowViewModel> group in included.GroupBy(x => x.SubmarineName))
+            {
+                Guid? submarineId = null;
+
+                if (group.Key is { Length: > 0 } name)
+                {
+                    Submarine? submarine = await _submarines.FindByNameAsync(target.Id, name).ConfigureAwait(true);
+                    if (submarine is null)
+                    {
+                        submarine = new Submarine { CharacterId = target.Id, Name = name };
+                        await _submarines.AddAsync(submarine).ConfigureAwait(true);
+                    }
+
+                    submarineId = submarine.Id;
+                }
+
+                Domain.Records.LootRecord record = LootRecordFactory.Build(
+                    target.Id,
+                    date,
+                    [.. group.Select(x => x.ToEntry())]);
+
+                record.SubmarineId = submarineId;
+                await _records.AddAsync(record).ConfigureAwait(true);
+
+                records++;
+                total += record.TotalValue;
+            }
 
             string summary = string.Create(
                 CultureInfo.InvariantCulture,
-                $"已记入「{target.DisplayName}」：{record.Date:yyyy-MM-dd} · {record.Items.Count} 种道具 · 合计 {record.TotalValue:N0} 吉尔");
+                $"已记入「{target.DisplayName}」：{date:yyyy-MM-dd} · {records} 笔（按艇分开）· 合计 {total:N0} 吉尔");
 
             Clear();
             StatusMessage = summary;

@@ -35,6 +35,25 @@ public sealed class JapaneseLogLineParserTests
     }
 
     [Theory]
+    [InlineData("[11:40] 潜水艦「Strawberry」の探索完了を確認しました", "Strawberry")]
+    // 解析前会去掉空白，所以带空格的艇名读出来是不带空格的；归属判定用同一套规则，不受影响。
+    [InlineData("[11:41] 潜水艦「Black berry」の探索完了を確認しました。", "Blackberry")]
+    public void TryParseSubmarineReturn_ReadsTheSubmarineName(string line, string expected)
+    {
+        Assert.True(JapaneseLogLineParser.TryParseSubmarineReturn(line, out string name));
+        Assert.Equal(expected, name);
+    }
+
+    [Theory]
+    [InlineData("[11:40] 潜水艦「テスト」が出港しました")]
+    [InlineData("[11:40] テストさんは p沈没船の指輪X4を入手した。")]
+    [InlineData("")]
+    public void TryParseSubmarineReturn_IgnoresOtherLines(string line)
+    {
+        Assert.False(JapaneseLogLineParser.TryParseSubmarineReturn(line, out _));
+    }
+
+    [Theory]
     [InlineData("[11:40] 潜水艦「テスト」の探索完了を確認しました")]
     [InlineData("[11:40] pシャーク級艦尾を修理しました")]
     [InlineData("[11:40] 潜水艦「テスト」が出港しました")]

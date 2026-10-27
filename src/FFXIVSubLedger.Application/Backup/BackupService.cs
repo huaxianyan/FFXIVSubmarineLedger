@@ -72,6 +72,15 @@ public sealed class BackupService(IBackupStore store)
         if (orphan is not null)
             throw new ValidationException($"备份里有一笔记录指向不存在的角色（{orphan}），这份备份不完整。");
 
+        HashSet<Guid> submarineIds = [.. document.Submarines.Select(x => x.Id)];
+        Guid? orphanSubmarine = document.Records
+            .Where(x => x.SubmarineId is { } id && !submarineIds.Contains(id))
+            .Select(x => x.SubmarineId)
+            .FirstOrDefault();
+
+        if (orphanSubmarine is not null)
+            throw new ValidationException($"备份里有一笔记录指向不存在的艇（{orphanSubmarine}），这份备份不完整。");
+
         await store.ImportAsync(document, ct).ConfigureAwait(false);
 
         return Summarize(document);
@@ -80,6 +89,7 @@ public sealed class BackupService(IBackupStore store)
     private static BackupSummary Summarize(BackupDocument document) => new(
         document.Characters.Count,
         document.FreeCompanies.Count,
+        document.Submarines.Count,
         document.Records.Count,
         document.Records.Sum(x => x.Items.Count));
 }

@@ -89,6 +89,45 @@ public sealed class LootScannerTests
     }
 
     [Fact]
+    public void Scan_AssignsLootToTheSubmarineNamedAfterIt()
+    {
+        // 日志里艇名出现在它那批收益行之后，所以归属是「上一批」。
+        string[] lines =
+        [
+            "[11:40] テストさんは p沈没船の高級首飾りX5を入手した。",
+            "[11:40] テストさんは p海産油脂X 3を入手した。",
+            "[11:40] 潜水艦「Strawberry」の探索完了を確認しました",
+            "[11:40] 潜水艦「Strawberry」が出港しました",
+            "[11:41] テストさんは pルビー※ 30を入手した。",
+            "[11:41] 潜水艦「Blackberry」の探索完了を確認しました",
+        ];
+
+        IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(lines, Catalog);
+
+        Assert.Equal(3, loot.Count);
+        Assert.All(loot.Take(2), entry => Assert.Equal("Strawberry", entry.SubmarineName));
+        Assert.Equal("Blackberry", loot[2].SubmarineName);
+    }
+
+    [Fact]
+    public void Scan_LeavesLootWithoutAMatchingReturnUnattributed()
+    {
+        // 收完艇但「探索完了」那行还没刷出来（或者被刷掉了）。
+        string[] lines =
+        [
+            "[11:40] テストさんは p沈没船の指輪X4を入手した。",
+            "[11:41] 潜水艦「Strawberry」の探索完了を確認しました",
+            "[11:42] テストさんは pルビー×30を入手した。",
+        ];
+
+        IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(lines, Catalog);
+
+        Assert.Equal(2, loot.Count);
+        Assert.Equal("Strawberry", loot[0].SubmarineName);
+        Assert.Null(loot[1].SubmarineName);
+    }
+
+    [Fact]
     public void Scan_KeepsUnknownItemsWithoutInventingAPrice()
     {
         RecognizedLoot entry = Assert.Single(
