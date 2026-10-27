@@ -9,6 +9,10 @@
     <AvaloniaResource Include="Assets\**" />
   </ItemGroup>
   <ItemGroup>
+    <!-- OCR 模型要作为真实文件落在输出目录，Tesseract 自己按路径读，不能嵌进资源里。 -->
+    <None Include="Data\tessdata\*.traineddata" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
     <PackageReference Include="Avalonia" Version="12.1.1" />
     <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />

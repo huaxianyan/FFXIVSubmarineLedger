@@ -75,23 +75,10 @@ public sealed class SqliteDatabase
             item_id     INTEGER NOT NULL,
             item_name   TEXT    NOT NULL,
             quantity    INTEGER NOT NULL,
+            is_high_quality INTEGER NOT NULL DEFAULT 0,
             unit_price  INTEGER NOT NULL,
             is_unknown  INTEGER NOT NULL DEFAULT 0,
             FOREIGN KEY (record_id) REFERENCES loot_records (id) ON DELETE CASCADE
-        );
-
-        CREATE TABLE IF NOT EXISTS loot_catalog (
-            item_id      INTEGER PRIMARY KEY,
-            icon_id      INTEGER NOT NULL,
-            name         TEXT    NOT NULL,
-            shop_price   INTEGER NOT NULL,
-            is_built_in  INTEGER NOT NULL DEFAULT 1
-        );
-
-        CREATE TABLE IF NOT EXISTS icon_choices (
-            icon_id      INTEGER PRIMARY KEY,
-            item_id      INTEGER NOT NULL,
-            last_used_at TEXT    NOT NULL
         );
 
         CREATE TABLE IF NOT EXISTS settings (
@@ -102,6 +89,5 @@ public sealed class SqliteDatabase
         CREATE INDEX IF NOT EXISTS idx_loot_records_date      ON loot_records (date);
         CREATE INDEX IF NOT EXISTS idx_loot_records_character ON loot_records (character_id);
         CREATE INDEX IF NOT EXISTS idx_loot_items_record      ON loot_items (record_id);
-        CREATE INDEX IF NOT EXISTS idx_loot_catalog_icon      ON loot_catalog (icon_id);
         """;
 }

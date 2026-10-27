@@ -1,3 +1,4 @@
+using System.Collections.ObjectModel;
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -6,6 +7,9 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubLedger.Desktop.Services;
+using FFXIVSubLedger.Infrastructure.Catalog;
+using FFXIVSubLedger.Infrastructure.Parsing;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
@@ -16,6 +20,11 @@ namespace FFXIVSubLedger.Desktop.ViewModels;
 public sealed partial class RecordsPageViewModel : ObservableObject
 {
     private readonly Func<TopLevel?> _topLevelProvider;
+    private readonly OcrService _ocr = new();
+    private ItemCatalog? _catalog;
+
+    /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
+    private int _recognizeGeneration;
 
     public RecordsPageViewModel(Func<TopLevel?> topLevelProvider, CharacterManagerViewModel characters)
     {
@@ -32,8 +41,17 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public CharacterManagerViewModel Characters { get; }
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Preview))]
     [NotifyPropertyChangedFor(nameof(HasImage))]
     private Bitmap? _source;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private Bitmap? _overlay;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(Preview))]
+    private bool _showLineOverlay = true;
 
     [ObservableProperty]
     private string _sourceLabel = string.Empty;
@@ -45,11 +63,44 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     private string _statusMessage = string.Empty;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLineSummary))]
+    private string _lineSummary = string.Empty;
+
+    [ObservableProperty]
+    private string _lineHint = string.Empty;
+
+    /// <summary>逐行识别出的文字，序号与行框序号对应。</summary>
+    public ObservableCollection<string> RecognizedLines { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasOcrSummary))]
+    private string _ocrSummary = string.Empty;
+
+    [ObservableProperty]
+    private bool _isRecognizing;
+
+    /// <summary>从日志行里认出的入手记录，已对过词表并算好单价。</summary>
+    public ObservableCollection<string> LootLines { get; } = [];
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasLootSummary))]
+    private string _lootSummary = string.Empty;
+
     /// <summary>拖拽悬停中，用于把拖放区高亮出来。</summary>
     [ObservableProperty]
     private bool _isDragOver;
 
     public bool HasImage => Source is not null;
+
+    public bool HasLineSummary => LineSummary.Length > 0;
+
+    public bool HasOcrSummary => OcrSummary.Length > 0;
+
+    public bool HasLootSummary => LootSummary.Length > 0;
+
+    /// <summary>预览图。勾上叠加就显示画了行框的版，否则显示原图。</summary>
+    public Bitmap? Preview => ShowLineOverlay && Overlay is not null ? Overlay : Source;
 
     public bool HasStatus => StatusMessage.Length > 0;
 
@@ -74,9 +125,16 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     private void Clear()
     {
         Source = null;
+        Overlay = null;
         SourceLabel = string.Empty;
         ImageInfo = string.Empty;
         StatusMessage = string.Empty;
+        LineSummary = string.Empty;
+        LineHint = string.Empty;
+        OcrSummary = string.Empty;
+        RecognizedLines.Clear();
+        LootSummary = string.Empty;
+        LootLines.Clear();
     }
 
     /// <summary>读系统剪贴板。视图层的 Ctrl+V 也走这里。</summary>
@@ -212,6 +270,101 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             CultureInfo.InvariantCulture,
             $"{bitmap.PixelSize.Width} × {bitmap.PixelSize.Height} 像素");
 
-        StatusMessage = "截图已载入。日志行识别还没接上（M3）。";
+        ScreenshotAnalyzer.AnalyzedScreenshot analyzed = ScreenshotAnalyzer.Analyze(bitmap);
+        Overlay = analyzed.Overlay;
+
+        if (analyzed.Lines.Count == 0)
+        {
+            LineSummary = string.Empty;
+            LineHint = string.Empty;
+            StatusMessage = "没找到文本行。截图里至少要有一段看得清的字。";
+            return;
+        }
+
+        int[] heights = [.. analyzed.Lines.Select(x => x.Height)];
+        LineSummary = string.Create(
+            CultureInfo.InvariantCulture,
+            $"切出 {analyzed.Lines.Count} 行 · 行高 {heights.Min()}–{heights.Max()} px · 起始行 {analyzed.Lines[0].Top} px");
+
+        LineHint = $"物名与数量还没核对（下一步接行模板与词表）。先看行框有没有切半或者漏行。";
+        StatusMessage = "行已切出，正在认字…";
+
+        _ = RecognizeAsync(analyzed);
     }
+
+    private async Task RecognizeAsync(ScreenshotAnalyzer.AnalyzedScreenshot analyzed)
+    {
+        int generation = ++_recognizeGeneration;
+
+        IsRecognizing = true;
+        RecognizedLines.Clear();
+
+        try
+        {
+            IReadOnlyList<string> texts = await _ocr
+                .ReadLinesAsync(analyzed.Gray, analyzed.Lines)
+                .ConfigureAwait(true);
+
+            if (generation != _recognizeGeneration)
+                return;
+
+            int index = 1;
+            foreach (string text in texts)
+                RecognizedLines.Add(string.Create(CultureInfo.InvariantCulture, $"#{index++:00}  {text}"));
+
+            OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读出 {texts.Count} 行文字");
+
+            _catalog ??= ItemCatalog.Load();
+            IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog);
+
+            foreach (RecognizedLoot entry in loot)
+                LootLines.Add(Format(entry));
+
+            int unknown = loot.Count(x => !x.IsKnown);
+            int total = loot.Sum(x => x.Subtotal);
+
+            LootSummary = string.Create(CultureInfo.InvariantCulture, $"入手 {loot.Count} 条 · 合计 {total:N0} 吉尔");
+            if (unknown > 0)
+                LootSummary += string.Create(CultureInfo.InvariantCulture, $"，其中 {unknown} 条词表里没有");
+
+            StatusMessage = loot.Count == 0
+                ? "没认出入手行。这段日志里可能没有收艇记录。"
+                : "入手记录已认出。还不能保存，逐条核对要等下一步。";
+        }
+        catch (Exception exception) when (exception is DirectoryNotFoundException or FileNotFoundException)
+        {
+            if (generation != _recognizeGeneration)
+                return;
+
+            OcrSummary = string.Empty;
+            StatusMessage = $"日文 OCR 模型缺失，无法认字：{exception.Message}";
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            if (generation != _recognizeGeneration)
+                return;
+
+            OcrSummary = string.Empty;
+            StatusMessage = $"文字识别失败：{exception.Message}";
+        }
+        finally
+        {
+            if (generation == _recognizeGeneration)
+                IsRecognizing = false;
+        }
+    }
+
+    private static string Format(RecognizedLoot entry)
+    {
+        string name = entry.IsHighQuality ? $"{entry.ItemName}（HQ）" : entry.ItemName;
+
+        return entry.IsKnown
+            ? string.Create(CultureInfo.InvariantCulture, $"#{entry.LineNumber:00}  {name} ×{entry.Quantity}  @ {entry.UnitPrice:N0} = {entry.Subtotal:N0}{CandidateSuffix(entry)}")
+            : string.Create(CultureInfo.InvariantCulture, $"#{entry.LineNumber:00}  {name} ×{entry.Quantity}  词表里没有，待补价格");
+    }
+
+    private static string CandidateSuffix(RecognizedLoot entry) =>
+        entry.IsAmbiguous
+            ? string.Create(CultureInfo.InvariantCulture, $"  （候选 {entry.Candidates.Count} 个：{string.Join(" / ", entry.Candidates.Select(x => x.Name))}）")
+            : string.Empty;
 }

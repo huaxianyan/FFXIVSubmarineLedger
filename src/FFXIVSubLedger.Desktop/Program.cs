@@ -1,4 +1,5 @@
 using Avalonia;
+using FFXIVSubLedger.Desktop.Services;
 
 namespace FFXIVSubLedger.Desktop;
 
@@ -6,7 +7,22 @@ internal static class Program
 {
     [STAThread]
     public static void Main(string[] args)
-        => BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    {
+        // 开发期命令先拦，拦到就不进 UI 循环。
+        if (DumpLinesCommand.TryParse(args, out string imagePath, out string outputPath))
+        {
+            DumpLinesCommand.Run(imagePath, outputPath);
+            return;
+        }
+
+        if (DumpOcrCommand.TryParse(args, out string ocrImage, out string ocrOutput, out string tessdata))
+        {
+            DumpOcrCommand.Run(ocrImage, ocrOutput, tessdata);
+            return;
+        }
+
+        BuildAvaloniaApp().StartWithClassicDesktopLifetime(args);
+    }
 
     public static AppBuilder BuildAvaloniaApp()
         => AppBuilder.Configure<App>()

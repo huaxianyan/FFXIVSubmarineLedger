@@ -4,9 +4,14 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\FFXIVSubLedger.Domain\FFXIVSubLedger.Domain.csproj" />
     <ProjectReference Include="..\FFXIVSubLedger.Application\FFXIVSubLedger.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 掉落表随程序分发，用户可查看、可手工补。 -->
+    <None Include="Data\items.ja.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

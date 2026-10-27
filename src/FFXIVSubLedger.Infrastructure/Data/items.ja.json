@@ -1,0 +1,14 @@
+[
+  { "itemId": 22500, "name": "沈没船の指輪", "shopPriceNq": 8000, "canBeHq": false },
+  { "itemId": 22501, "name": "沈没船の腕輪", "shopPriceNq": 9000, "canBeHq": false },
+  { "itemId": 22502, "name": "沈没船の耳飾り", "shopPriceNq": 10000, "canBeHq": false },
+  { "itemId": 22503, "name": "沈没船の首飾り", "shopPriceNq": 13000, "canBeHq": false },
+  { "itemId": 22504, "name": "沈没船の高級指輪", "shopPriceNq": 27000, "canBeHq": false },
+  { "itemId": 22505, "name": "沈没船の高級腕輪", "shopPriceNq": 28500, "canBeHq": false },
+  { "itemId": 22506, "name": "沈没船の高級耳飾り", "shopPriceNq": 30000, "canBeHq": false },
+  { "itemId": 22507, "name": "沈没船の高級首飾り", "shopPriceNq": 34500, "canBeHq": false },
+  { "itemId": 23222, "name": "海産油脂", "shopPriceNq": 1, "canBeHq": false },
+  { "itemId": 5069, "name": "ゴールドインゴット", "shopPriceNq": 4, "canBeHq": true },
+  { "itemId": 5187, "name": "ルビー", "shopPriceNq": 2, "canBeHq": true },
+  { "itemId": 5189, "name": "エメラルド", "shopPriceNq": 2, "canBeHq": true }
+]

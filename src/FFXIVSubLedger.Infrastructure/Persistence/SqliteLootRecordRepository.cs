@@ -87,13 +87,14 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
             command.Transaction = transaction;
             command.CommandText =
                 """
-                INSERT INTO loot_items (record_id, item_id, item_name, quantity, unit_price, is_unknown)
-                VALUES ($record, $item, $name, $quantity, $price, $unknown);
+                INSERT INTO loot_items (record_id, item_id, item_name, quantity, is_high_quality, unit_price, is_unknown)
+                VALUES ($record, $item, $name, $quantity, $hq, $price, $unknown);
                 """;
             command.Parameters.AddWithValue("$record", record.Id.ToString());
             command.Parameters.AddWithValue("$item", item.ItemId);
             command.Parameters.AddWithValue("$name", item.ItemName);
             command.Parameters.AddWithValue("$quantity", item.Quantity);
+            command.Parameters.AddWithValue("$hq", item.IsHighQuality ? 1 : 0);
             command.Parameters.AddWithValue("$price", item.UnitPrice);
             command.Parameters.AddWithValue("$unknown", item.IsUnknown ? 1 : 0);
             command.ExecuteNonQuery();
@@ -147,7 +148,7 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
         {
             command.CommandText =
                 """
-                SELECT item_id, item_name, quantity, unit_price, is_unknown
+                SELECT item_id, item_name, quantity, is_high_quality, unit_price, is_unknown
                   FROM loot_items
                  WHERE record_id = $record
                  ORDER BY id;
@@ -161,8 +162,9 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
                     ItemId = (uint)reader.GetInt64(0),
                     ItemName = reader.GetString(1),
                     Quantity = reader.GetInt32(2),
-                    UnitPrice = reader.GetInt32(3),
-                    IsUnknown = reader.GetInt64(4) != 0,
+                    IsHighQuality = reader.GetInt64(3) != 0,
+                    UnitPrice = reader.GetInt32(4),
+                    IsUnknown = reader.GetInt64(5) != 0,
                 });
             }
         }

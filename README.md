@@ -14,7 +14,13 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 
 **识别路线已改（2026-10-27）**：从「截背包区域认图标」改为「截日志窗口认文字」，日语优先。改动的理由与新方案见 [docs/PLAN.md](docs/PLAN.md)，旧的网格检测与图标匹配整层退役，实测记录留在 PLAN 附录 A。
 
-**M3 日语日志闭环待实现**，但日志行格式已用真实样本核实（756 × 798、27 行）：入手行是 `[11:40] 角色名は ▶ 物名×5を入手した。`，HQ 物品在物名后多一个 `◉`，数量与物名同行、无空格分隔。行定位、OCR、行模板、词表纠错、确认界面、计价落库均未开始。
+**M3 日语日志闭环进行中**。日志行格式已用真实样本核实（756 × 798、26 行）：入手行是 `[11:40] 角色名は ▶ 物名×5を入手した。`，HQ 物品在物名后多一个 `◉`，数量与物名同行、无空格分隔。
+
+**文本行定位已完成**：`Infrastructure/Recognition/TextLineLocator.cs`，行投影成带 → 按行高中位数滤掉边缘亮边 → 叠框预览。真实样本上切出 26 行，左边界全为 13 px，行高 24–25 px，与独立量测脚本完全一致。
+
+**日文 OCR 已接入**：Tesseract 5 + 随包分发的 `tessdata_fast` 日文模型（不依赖系统语言包）。真实样本 26 行全部读出。
+
+**识别链已闭环**：行模板解析 + 词表纠错 + 按卖店价计价。真实样本认出 14 条入手行，物名与数量 14/14 正确，合计 779,378 吉尔（真值 779,434，差的 56 全部来自两条被 OCR 吞掉 HQ 标记的 `エメラルド`）。确认界面（可改数量与 HQ、可删行）与落库尚未开始。
 
 初版之后还要做「直接读取游戏内文本、彻底不截图」，需求与边界问题记录在 PLAN 第 12 节，本版不实现。
 
@@ -33,6 +39,7 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 - C# / .NET 10 LTS
 - Avalonia UI 12 + CommunityToolkit.Mvvm
 - SQLite（Microsoft.Data.Sqlite）
+- Tesseract 5（日文 OCR，模型随程序分发）
 - xUnit
 
 ## 目录结构
@@ -40,9 +47,9 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 ```text
 src/FFXIVSubLedger.Domain            角色、部队、收益记录、道具、卖店价等领域模型
 src/FFXIVSubLedger.Application       用例与仓储接口
-src/FFXIVSubLedger.Infrastructure    SQLite 持久化
+src/FFXIVSubLedger.Infrastructure    SQLite 持久化、文本行解析（`Parsing`）、掉落表（`Catalog` + `Data/items.ja.json`）
 src/FFXIVSubLedger.Platform.Windows  Windows 数据目录
-src/FFXIVSubLedger.Desktop           Avalonia UI、MVVM
+src/FFXIVSubLedger.Desktop           Avalonia UI、MVVM、随包分发的 OCR 模型（`Data/tessdata`）
 tests/                               自动化测试
 tools/                               日志截图版式量测、窗口截图与剪贴板脚本（Python）
 docs/PLAN.md                         技术方案
@@ -92,14 +99,14 @@ FFXIVSubLedger.exe --image "D:\shots\bag.png"
 
 ## 识别路线
 
-`Infrastructure/Recognition/` 放纯算法部分，不依赖 UI，可以单独测。目标流程是「日志截图 → 文本行 → 日文识别 → 行模板 → 词表纠错」，均未实现：
+`Infrastructure/Recognition/` 放纯算法部分，不依赖 UI，可以单独测。目标流程是「日志截图 → 文本行 → 日文识别 → 行模板 → 词表纠错」，目前只完成第一步：
 
 | 模块 | 职责 | 状态 |
 | --- | --- | --- |
-| 文本行定位 | 行投影 + 左边界聚类，逐行给出行带边界 | 待实现 |
-| 日文 OCR | 行带放大 2–3 倍、按行自适应二值化后识别；接口隔离，基线用 `Windows.Media.Ocr` | 待实现 |
-| 行模板解析 | `JapaneseChatLogParser`：从 `[HH:MM] 角色名は ▶ 物名×Nを入手した。` 取物名与数量 | 待实现 |
-| 词表纠错 | 封闭词表内编辑距离 + 日文字形混淆表，多候选交人确认 | 待实现 |
+| 文本行定位 | `TextLineLocator`：行投影成带 → 按行高中位数滤掉边缘亮边 → 逐行算墨迹左右边界 | 已完成 |
+| 日文 OCR | `LinePreprocessor`（裁行、放大 3×、Otsu 二值化、反相）+ `TesseractLineReader`；模型随包放在 `Data/tessdata/` | 已完成 |
+| 行模板解析 | `JapaneseLogLineParser`：从 `[HH:MM] 角色名は ▶ 物名×Nを入手した。` 取物名与数量，容忍 OCR 把符号读歪 | 已完成 |
+| 词表纠错 | `ItemMatcher`：封闭词表内编辑距离，多候选显式标出并按价降序默认 | 已完成 |
 | 网格检测、图标提取与匹配 | v0.4 的旧路线，已退役，代码已删除 | 已删 |
 
 日志行格式已用真实样本核实，具体形态、版式参数与遗留未知项见 [docs/PLAN.md](docs/PLAN.md) 第 2 节与 6.4。
@@ -108,6 +115,12 @@ FFXIVSubLedger.exe --image "D:\shots\bag.png"
 
 ```bash
 python tools/measure_log_lines.py <日志截图.png>
+```
+
+不开窗口直接看一张图切出了哪些行：
+
+```bash
+FFXIVSubLedger.exe --dump-lines <图片> <输出.txt>
 ```
 
 输出行带位置、行距、行高与左边距。纯标准库实现，不依赖 Pillow 与 numpy。
@@ -121,6 +134,13 @@ python tools/measure_log_lines.py <日志截图.png>
 ## 开源许可证
 
 除明确标注的第三方内容外，本项目的原创源代码与文档采用 [GNU General Public License v3.0 only](https://www.gnu.org/licenses/gpl-3.0.html)。
+
+第三方组件：
+
+- [Tesseract](https://github.com/tesseract-ocr/tesseract)（Apache-2.0），通过 NuGet 包 `Tesseract` 引入。
+- [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 的日文模型 `jpn.traineddata`（Apache-2.0），位于 `src/FFXIVSubLedger.Desktop/Data/tessdata/`。
+
+OCR 引擎与模型都是随程序分发的，不依赖用户系统里装没装 OCR 组件或日文语言包。
 
 ## FINAL FANTASY XIV 与 Square Enix 声明
 

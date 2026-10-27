@@ -99,23 +99,4 @@ public sealed class PersistenceSmokeTests : IDisposable
 
         Assert.Empty(await records.ListAsync());
     }
-
-    [Fact]
-    public async Task CatalogCanBeQueriedByIconForAmbiguousMatches()
-    {
-        SqliteLootCatalogRepository catalog = new(_database);
-        await catalog.ReplaceBuiltInAsync(
-        [
-            new(1, 26001, "沉船项链", 13000, true),
-            new(2, 26001, "上等沉船项链", 34500, true),
-            new(3, 26002, "沉船戒指", 8000, true),
-        ]);
-
-        // 同一个图标对应多个道具时，按卖店价降序返回候选。
-        IReadOnlyList<Domain.Catalog.LootCatalogEntry> candidates = await catalog.ListByIconIdAsync(26001);
-
-        Assert.Equal(2, candidates.Count);
-        Assert.Equal("上等沉船项链", candidates[0].Name);
-        Assert.Equal(3, (await catalog.ListAsync()).Count);
-    }
 }

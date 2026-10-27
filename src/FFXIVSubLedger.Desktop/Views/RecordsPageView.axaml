@@ -84,14 +84,63 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
                                     VerticalAlignment="Center">
+                            <CheckBox IsChecked="{Binding ShowLineOverlay}"
+                                      IsEnabled="{Binding HasLineSummary}" Content="显示行框" />
                             <Button Content="清除" Command="{Binding ClearCommand}" />
                         </StackPanel>
                     </Grid>
 
+                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="#40808080" Background="#07808080"
+                            IsVisible="{Binding HasLineSummary}">
+                        <StackPanel Spacing="6">
+                            <TextBlock FontSize="13" FontWeight="SemiBold"
+                                       Text="{Binding LineSummary}" />
+                            <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
+                                       Text="{Binding LineHint}" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="#40808080" Background="#07808080"
+                            IsVisible="{Binding HasLootSummary}">
+                        <StackPanel Spacing="8">
+                            <TextBlock FontSize="13" FontWeight="SemiBold"
+                                       Text="{Binding LootSummary}" />
+                            <ItemsControl ItemsSource="{Binding LootLines}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <TextBlock FontSize="12" Opacity="0.85" TextWrapping="Wrap"
+                                                   Text="{Binding}" />
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                            BorderBrush="#40808080" Background="#07808080"
+                            IsVisible="{Binding HasOcrSummary}">
+                        <StackPanel Spacing="8">
+                            <TextBlock FontSize="13" FontWeight="SemiBold"
+                                       Text="{Binding OcrSummary}" />
+                            <ScrollViewer MaxHeight="200">
+                                <ItemsControl ItemsSource="{Binding RecognizedLines}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <TextBlock FontSize="12" Opacity="0.85" TextWrapping="Wrap"
+                                                       Text="{Binding}" />
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </ScrollViewer>
+                        </StackPanel>
+                    </Border>
+
                     <Border x:Name="PreviewPanel" Padding="10" CornerRadius="8" BorderThickness="1"
                             BorderBrush="#40808080" Background="#20808080"
                             HorizontalAlignment="Center">
-                        <Image Source="{Binding Source}" Stretch="Uniform" MaxHeight="360" />
+                        <Image Source="{Binding Preview}" Stretch="Uniform" MaxHeight="360" />
                     </Border>
                 </StackPanel>
             </Border>
