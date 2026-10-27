@@ -9,7 +9,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(ApplicationComposition composition, Func<TopLevel?> topLevelProvider)
     {
         Characters = new CharacterManagerViewModel(composition.Characters);
-        Records = new RecordsPageViewModel(topLevelProvider, Characters);
+        Records = new RecordsPageViewModel(topLevelProvider, Characters, composition.Records);
         Statistics = RoadmapPageViewModel.CreateStatistics();
         Settings = RoadmapPageViewModel.CreateSettings();
     }

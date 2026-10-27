@@ -1,4 +1,5 @@
 using FFXIVSubLedger.Application.Characters;
+using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Application.Settings;
 using FFXIVSubLedger.Domain.Characters;
 using FFXIVSubLedger.Domain.Records;
@@ -79,6 +80,32 @@ public sealed class PersistenceSmokeTests : IDisposable
         Assert.Single(loaded);
         Assert.Equal(2, loaded[0].Items.Count);
         Assert.Equal(3 * 34500 + 2 * 8000, loaded[0].TotalValue);
+    }
+
+    [Fact]
+    public async Task SavedRecordKeepsQualityAndMergedQuantities()
+    {
+        SqliteCharacterRepository characters = new(_database);
+        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        await characters.AddAsync(character);
+
+        SqliteLootRecordRepository records = new(_database);
+        LootRecord record = LootRecordFactory.Build(
+            character.Id,
+            new DateOnly(2026, 10, 27),
+            [
+                new LootEntryInput(22507, "沈没船の高級首飾り", 5, false, 34500, false),
+                new LootEntryInput(22507, "沈没船の高級首飾り", 5, false, 34500, false),
+                new LootEntryInput(5189, "エメラルド", 25, true, 3, false),
+            ]);
+
+        await records.AddAsync(record);
+
+        LootRecord loaded = Assert.Single(await records.ListAsync());
+        Assert.Equal(2, loaded.Items.Count);
+        Assert.Equal(10, loaded.Items[0].Quantity);
+        Assert.True(loaded.Items[1].IsHighQuality);
+        Assert.Equal(345000 + 75, loaded.TotalValue);
     }
 
     [Fact]

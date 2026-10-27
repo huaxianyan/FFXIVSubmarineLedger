@@ -1,8 +1,10 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
+             xmlns:domain="clr-namespace:FFXIVSubLedger.Domain.Catalog;assembly=FFXIVSubLedger.Domain"
              x:Class="FFXIVSubLedger.Desktop.Views.RecordsPageView"
              x:DataType="vm:RecordsPageViewModel"
+             x:CompileBindings="True"
              DragDrop.AllowDrop="True"
              Background="Transparent">
 
@@ -103,15 +105,56 @@
 
                     <Border Padding="14" CornerRadius="8" BorderThickness="1"
                             BorderBrush="#40808080" Background="#07808080"
-                            IsVisible="{Binding HasLootSummary}">
-                        <StackPanel Spacing="8">
-                            <TextBlock FontSize="13" FontWeight="SemiBold"
-                                       Text="{Binding LootSummary}" />
-                            <ItemsControl ItemsSource="{Binding LootLines}">
+                            IsVisible="{Binding HasLootRows}">
+                        <StackPanel Spacing="10">
+                            <Grid ColumnDefinitions="*,Auto">
+                                <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" Text="{Binding LootSummary}" />
+                                <Button Grid.Column="1" Content="记入账"
+                                        Command="{Binding SaveCommand}" />
+                            </Grid>
+
+                            <ItemsControl ItemsSource="{Binding LootRows}">
                                 <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <TextBlock FontSize="12" Opacity="0.85" TextWrapping="Wrap"
-                                                   Text="{Binding}" />
+                                    <DataTemplate x:DataType="vm:LootRowViewModel">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10"
+                                              Margin="0,4">
+                                            <CheckBox Grid.Column="0" VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsIncluded}" />
+
+                                            <StackPanel Grid.Column="1" Spacing="2">
+                                                <TextBlock FontSize="12" TextWrapping="Wrap"
+                                                           Text="{Binding ItemName}" />
+                                                <TextBlock FontSize="11" Opacity="0.4" TextWrapping="Wrap"
+                                                           Text="{Binding ItemText}" />
+                                                <ComboBox FontSize="11" MinWidth="240"
+                                                          IsVisible="{Binding HasCandidateChoice}"
+                                                          ItemsSource="{Binding Candidates}"
+                                                          SelectedItem="{Binding SelectedItem}">
+                                                    <ComboBox.ItemTemplate>
+                                                        <DataTemplate x:DataType="domain:LootCatalogEntry">
+                                                            <TextBlock FontSize="11" Text="{Binding Name}" />
+                                                        </DataTemplate>
+                                                    </ComboBox.ItemTemplate>
+                                                </ComboBox>
+                                            </StackPanel>
+
+                                            <NumericUpDown Grid.Column="2" Width="104" Minimum="1" Increment="1"
+                                                           FormatString="0" VerticalAlignment="Center"
+                                                           Value="{Binding Quantity}" />
+
+                                            <CheckBox Grid.Column="3" Content="HQ" VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsHighQuality}"
+                                                      IsEnabled="{Binding CanBeHighQuality}" />
+
+                                            <StackPanel Grid.Column="4" Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock FontSize="11" Opacity="0.8"
+                                                           Text="{Binding PriceLabel}" />
+                                                <NumericUpDown Width="120" Minimum="0" Increment="1" FormatString="0"
+                                                               IsVisible="{Binding IsUnknown}"
+                                                               Value="{Binding UnitPriceOverride}" />
+                                            </StackPanel>
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
@@ -125,14 +168,8 @@
                             <TextBlock FontSize="13" FontWeight="SemiBold"
                                        Text="{Binding OcrSummary}" />
                             <ScrollViewer MaxHeight="200">
-                                <ItemsControl ItemsSource="{Binding RecognizedLines}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <TextBlock FontSize="12" Opacity="0.85" TextWrapping="Wrap"
-                                                       Text="{Binding}" />
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
+                                <TextBlock FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                           Text="{Binding OcrText}" />
                             </ScrollViewer>
                         </StackPanel>
                     </Border>

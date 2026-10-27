@@ -7,6 +7,8 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubLedger.Application.Abstractions;
+using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Desktop.Services;
 using FFXIVSubLedger.Infrastructure.Catalog;
 using FFXIVSubLedger.Infrastructure.Parsing;
@@ -14,21 +16,26 @@ using FFXIVSubLedger.Infrastructure.Parsing;
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
 /// <summary>
-/// 收艇记账页。负责把截图弄进来——拖入、Ctrl+V、读剪贴板、选文件——并预览。
-/// 日志行定位、文本识别与计价属于 M3，还没接。
+/// 收艇记账页。把截图弄进来、切行、认字、对词表、算出本次收益，
+/// 由用户逐行核对后写入记录。
 /// </summary>
 public sealed partial class RecordsPageViewModel : ObservableObject
 {
     private readonly Func<TopLevel?> _topLevelProvider;
+    private readonly ILootRecordRepository _records;
     private readonly OcrService _ocr = new();
     private ItemCatalog? _catalog;
 
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
 
-    public RecordsPageViewModel(Func<TopLevel?> topLevelProvider, CharacterManagerViewModel characters)
+    public RecordsPageViewModel(
+        Func<TopLevel?> topLevelProvider,
+        CharacterManagerViewModel characters,
+        ILootRecordRepository records)
     {
         _topLevelProvider = topLevelProvider;
+        _records = records;
         Characters = characters;
 
         Characters.PropertyChanged += (_, args) =>
@@ -70,8 +77,9 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [ObservableProperty]
     private string _lineHint = string.Empty;
 
-    /// <summary>逐行识别出的文字，序号与行框序号对应。</summary>
-    public ObservableCollection<string> RecognizedLines { get; } = [];
+    /// <summary>OCR 读到的逐行文字，只用于核对识别质量。</summary>
+    [ObservableProperty]
+    private string _ocrText = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasOcrSummary))]
@@ -80,8 +88,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [ObservableProperty]
     private bool _isRecognizing;
 
-    /// <summary>从日志行里认出的入手记录，已对过词表并算好单价。</summary>
-    public ObservableCollection<string> LootLines { get; } = [];
+    /// <summary>认出的入手记录，逐行可改数量与品质，取消勾选就不入账。</summary>
+    public ObservableCollection<LootRowViewModel> LootRows { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasLootSummary))]
@@ -98,6 +106,10 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public bool HasOcrSummary => OcrSummary.Length > 0;
 
     public bool HasLootSummary => LootSummary.Length > 0;
+
+    public bool HasLootRows => LootRows.Count > 0;
+
+    public bool CanSave => LootRows.Any(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0);
 
     /// <summary>预览图。勾上叠加就显示画了行框的版，否则显示原图。</summary>
     public Bitmap? Preview => ShowLineOverlay && Overlay is not null ? Overlay : Source;
@@ -132,9 +144,10 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         LineSummary = string.Empty;
         LineHint = string.Empty;
         OcrSummary = string.Empty;
-        RecognizedLines.Clear();
+        OcrText = string.Empty;
         LootSummary = string.Empty;
-        LootLines.Clear();
+        LootRows.Clear();
+        RefreshLootTotals();
     }
 
     /// <summary>读系统剪贴板。视图层的 Ctrl+V 也走这里。</summary>
@@ -297,7 +310,9 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         int generation = ++_recognizeGeneration;
 
         IsRecognizing = true;
-        RecognizedLines.Clear();
+        OcrText = string.Empty;
+        LootRows.Clear();
+        RefreshLootTotals();
 
         try
         {
@@ -309,27 +324,30 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 return;
 
             int index = 1;
-            foreach (string text in texts)
-                RecognizedLines.Add(string.Create(CultureInfo.InvariantCulture, $"#{index++:00}  {text}"));
+            List<string> formatted =
+            [
+                .. texts.Select(text => string.Create(CultureInfo.InvariantCulture, $"#{index++:00}  {text}")),
+            ];
 
+            OcrText = string.Join(Environment.NewLine, formatted);
             OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读出 {texts.Count} 行文字");
 
             _catalog ??= ItemCatalog.Load();
             IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog);
 
+            LootRows.Clear();
             foreach (RecognizedLoot entry in loot)
-                LootLines.Add(Format(entry));
+            {
+                LootRowViewModel row = new(entry);
+                row.PropertyChanged += OnLootRowChanged;
+                LootRows.Add(row);
+            }
 
-            int unknown = loot.Count(x => !x.IsKnown);
-            int total = loot.Sum(x => x.Subtotal);
-
-            LootSummary = string.Create(CultureInfo.InvariantCulture, $"入手 {loot.Count} 条 · 合计 {total:N0} 吉尔");
-            if (unknown > 0)
-                LootSummary += string.Create(CultureInfo.InvariantCulture, $"，其中 {unknown} 条词表里没有");
+            RefreshLootTotals();
 
             StatusMessage = loot.Count == 0
                 ? "没认出入手行。这段日志里可能没有收艇记录。"
-                : "入手记录已认出。还不能保存，逐条核对要等下一步。";
+                : "逐行核对数量与品质，确认后写账。";
         }
         catch (Exception exception) when (exception is DirectoryNotFoundException or FileNotFoundException)
         {
@@ -354,17 +372,79 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         }
     }
 
-    private static string Format(RecognizedLoot entry)
-    {
-        string name = entry.IsHighQuality ? $"{entry.ItemName}（HQ）" : entry.ItemName;
+    private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLootTotals();
 
-        return entry.IsKnown
-            ? string.Create(CultureInfo.InvariantCulture, $"#{entry.LineNumber:00}  {name} ×{entry.Quantity}  @ {entry.UnitPrice:N0} = {entry.Subtotal:N0}{CandidateSuffix(entry)}")
-            : string.Create(CultureInfo.InvariantCulture, $"#{entry.LineNumber:00}  {name} ×{entry.Quantity}  词表里没有，待补价格");
+    private void RefreshLootTotals()
+    {
+        List<LootRowViewModel> included =
+        [
+            .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0),
+        ];
+
+        int total = included.Sum(x => x.Subtotal);
+        int unknown = included.Count(x => x.IsUnknown && x.UnitPrice == 0);
+
+        LootSummary = LootRows.Count == 0
+            ? string.Empty
+            : included.Count == 0
+                ? "没有勾选任何一行。"
+                : string.Create(CultureInfo.InvariantCulture, $"本次计入 {included.Count} 行 · 合计 {total:N0} 吉尔");
+
+        if (LootSummary.Length > 0 && unknown > 0)
+            LootSummary += string.Create(CultureInfo.InvariantCulture, $"，还有 {unknown} 行没填单价");
+
+        OnPropertyChanged(nameof(HasLootRows));
+        OnPropertyChanged(nameof(CanSave));
+        SaveCommand.NotifyCanExecuteChanged();
     }
 
-    private static string CandidateSuffix(RecognizedLoot entry) =>
-        entry.IsAmbiguous
-            ? string.Create(CultureInfo.InvariantCulture, $"  （候选 {entry.Candidates.Count} 个：{string.Join(" / ", entry.Candidates.Select(x => x.Name))}）")
-            : string.Empty;
+    /// <summary>
+    /// 把勾选的行写成一笔记录。归属角色取默认角色，没有默认就取第一个。
+    /// </summary>
+    [RelayCommand(CanExecute = nameof(CanSave))]
+    private async Task SaveAsync()
+    {
+        CharacterRowViewModel? target =
+            Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
+
+        if (target is null)
+        {
+            StatusMessage = "还没有角色。先到「角色管理」里添加一个，再记账。";
+            return;
+        }
+
+        List<LootEntryInput> entries =
+        [
+            .. LootRows
+                .Where(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0)
+                .Select(x => x.ToEntry()),
+        ];
+
+        if (entries.Count == 0)
+        {
+            StatusMessage = "没有可入账的行。";
+            return;
+        }
+
+        try
+        {
+            Domain.Records.LootRecord record = LootRecordFactory.Build(
+                target.Id,
+                DateOnly.FromDateTime(DateTime.Now),
+                entries);
+
+            await _records.AddAsync(record).ConfigureAwait(true);
+
+            string summary = string.Create(
+                CultureInfo.InvariantCulture,
+                $"已记入「{target.DisplayName}」：{record.Date:yyyy-MM-dd} · {record.Items.Count} 种道具 · 合计 {record.TotalValue:N0} 吉尔");
+
+            Clear();
+            StatusMessage = summary;
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            StatusMessage = $"写账失败：{exception.Message}";
+        }
+    }
 }

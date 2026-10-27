@@ -18,6 +18,7 @@ public sealed class ApplicationComposition
 
         Characters = new CharacterService(characterRepository);
         Settings = new SettingsService(settingsStore);
+        Records = new SqliteLootRecordRepository(database);
     }
 
     public SqliteDatabase Database { get; }
@@ -25,6 +26,8 @@ public sealed class ApplicationComposition
     public CharacterService Characters { get; }
 
     public SettingsService Settings { get; }
+
+    public ILootRecordRepository Records { get; }
 
     public static ApplicationComposition Create()
     {
