@@ -19,15 +19,6 @@ public sealed class RoadmapPageViewModel(
 
     public string Footnote { get; } = footnote;
 
-    public static RoadmapPageViewModel CreateStatistics() => new(
-        "把记下的每一笔汇总起来，看日均、月均、年均，以及按角色或部队拆分的明细。",
-        [
-            new RoadmapStepViewModel(1, "按日 / 周 / 月 / 年切换时间粒度"),
-            new RoadmapStepViewModel(2, "收益走势图与道具产出排行"),
-            new RoadmapStepViewModel(3, "按角色、部队筛选，支持导出 CSV"),
-        ],
-        "统计口径只认已经入账的记录，识别后没有确认的截图不会计入。");
-
     public static RoadmapPageViewModel CreateSettings() => new(
         "数据存放位置、识别参数与默认归属，都放在这里。",
         [

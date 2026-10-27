@@ -10,7 +10,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     {
         Characters = new CharacterManagerViewModel(composition.Characters);
         Records = new RecordsPageViewModel(topLevelProvider, Characters, composition.Records);
-        Statistics = RoadmapPageViewModel.CreateStatistics();
+        Statistics = new StatisticsPageViewModel(composition.Records, composition.Characters);
         Settings = RoadmapPageViewModel.CreateSettings();
     }
 
@@ -18,7 +18,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public RecordsPageViewModel Records { get; }
 
-    public RoadmapPageViewModel Statistics { get; }
+    public StatisticsPageViewModel Statistics { get; }
 
     public RoadmapPageViewModel Settings { get; }
 
@@ -67,7 +67,11 @@ public sealed partial class MainWindowViewModel : ObservableObject
     private void ShowRecords() => CurrentPage = NavigationPage.Records;
 
     [RelayCommand]
-    private void ShowStatistics() => CurrentPage = NavigationPage.Statistics;
+    private void ShowStatistics()
+    {
+        CurrentPage = NavigationPage.Statistics;
+        _ = Statistics.LoadAsync();
+    }
 
     [RelayCommand]
     private void ShowCharacters() => CurrentPage = NavigationPage.Characters;
@@ -92,5 +96,9 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public Task InitializeAsync() => RefreshAsync();
+    public Task InitializeAsync()
+    {
+        _ = Statistics.LoadAsync();
+        return RefreshAsync();
+    }
 }
