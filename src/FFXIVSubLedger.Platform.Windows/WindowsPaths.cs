@@ -11,8 +11,4 @@ public static class WindowsPaths
 
     public static string DatabasePath(string dataDirectory)
         => Path.Combine(dataDirectory, "subledger.db");
-
-    /// <summary>内置图标库所在目录。</summary>
-    public static string CatalogDirectory(string dataDirectory)
-        => Path.Combine(dataDirectory, "catalog");
 }

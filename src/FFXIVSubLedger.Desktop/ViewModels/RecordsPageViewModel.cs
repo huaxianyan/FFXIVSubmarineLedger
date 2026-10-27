@@ -23,8 +23,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 {
     private readonly Func<TopLevel?> _topLevelProvider;
     private readonly ILootRecordRepository _records;
+    private readonly Lazy<ItemCatalog> _catalog;
     private readonly OcrService _ocr = new();
-    private ItemCatalog? _catalog;
 
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
@@ -32,10 +32,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public RecordsPageViewModel(
         Func<TopLevel?> topLevelProvider,
         CharacterManagerViewModel characters,
-        ILootRecordRepository records)
+        ILootRecordRepository records,
+        Lazy<ItemCatalog> catalog)
     {
         _topLevelProvider = topLevelProvider;
         _records = records;
+        _catalog = catalog;
         Characters = characters;
 
         Characters.PropertyChanged += (_, args) =>
@@ -332,8 +334,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             OcrText = string.Join(Environment.NewLine, formatted);
             OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读出 {texts.Count} 行文字");
 
-            _catalog ??= ItemCatalog.Load();
-            IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog);
+            IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog.Value);
 
             LootRows.Clear();
             foreach (RecognizedLoot entry in loot)

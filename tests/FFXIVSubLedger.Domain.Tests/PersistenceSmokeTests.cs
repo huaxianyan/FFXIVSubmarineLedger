@@ -1,3 +1,4 @@
+using FFXIVSubLedger.Application.Backup;
 using FFXIVSubLedger.Application.Characters;
 using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Application.Settings;
@@ -106,6 +107,40 @@ public sealed class PersistenceSmokeTests : IDisposable
         Assert.Equal(10, loaded.Items[0].Quantity);
         Assert.True(loaded.Items[1].IsHighQuality);
         Assert.Equal(345000 + 75, loaded.TotalValue);
+    }
+
+    [Fact]
+    public async Task BackupImportReplacesEverythingInOneTransaction()
+    {
+        SqliteCharacterRepository characters = new(_database);
+        Character kept = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        await characters.AddAsync(kept);
+
+        SqliteLootRecordRepository records = new(_database);
+        await records.AddAsync(LootRecordFactory.Build(
+            kept.Id,
+            new DateOnly(2026, 10, 27),
+            [new LootEntryInput(5189, "エメラルド", 25, true, 3, false)]));
+
+        SqliteBackupStore store = new(_database);
+        BackupDocument backup = await store.ExportAsync();
+
+        // 导出之后又加了角色与记录，导入应该把它们一起送走。
+        await characters.AddAsync(new Character { Name = "Bob", World = "红玉海" });
+        await records.AddAsync(LootRecordFactory.Build(
+            kept.Id,
+            new DateOnly(2026, 10, 28),
+            [new LootEntryInput(22500, "沈没船の指輪", 1, false, 8000, false)]));
+
+        await store.ImportAsync(backup);
+
+        Character restored = Assert.Single(await characters.ListAsync());
+        Assert.Equal("Alice", restored.Name);
+
+        LootRecord record = Assert.Single(await records.ListAsync());
+        LootItem item = Assert.Single(record.Items);
+        Assert.True(item.IsHighQuality);
+        Assert.Equal(75, record.TotalValue);
     }
 
     [Fact]

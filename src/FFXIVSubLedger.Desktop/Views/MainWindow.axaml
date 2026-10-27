@@ -94,13 +94,13 @@
                 <views:RecordsPageView DataContext="{Binding Records}" />
             </Panel>
             <Panel Grid.Row="1" IsVisible="{Binding IsStatisticsPage}">
-                <views:RoadmapPageView DataContext="{Binding Statistics}" />
+                <views:StatisticsPageView DataContext="{Binding Statistics}" />
             </Panel>
             <Panel Grid.Row="1" IsVisible="{Binding IsCharactersPage}">
                 <views:CharacterManagerView DataContext="{Binding Characters}" />
             </Panel>
             <Panel Grid.Row="1" IsVisible="{Binding IsSettingsPage}">
-                <views:RoadmapPageView DataContext="{Binding Settings}" />
+                <views:SettingsPageView DataContext="{Binding Settings}" />
             </Panel>
         </Grid>
 

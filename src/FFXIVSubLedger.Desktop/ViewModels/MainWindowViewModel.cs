@@ -9,9 +9,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public MainWindowViewModel(ApplicationComposition composition, Func<TopLevel?> topLevelProvider)
     {
         Characters = new CharacterManagerViewModel(composition.Characters);
-        Records = new RecordsPageViewModel(topLevelProvider, Characters, composition.Records);
+        Records = new RecordsPageViewModel(topLevelProvider, Characters, composition.Records, composition.CatalogSource);
         Statistics = new StatisticsPageViewModel(composition.Records, composition.Characters);
-        Settings = RoadmapPageViewModel.CreateSettings();
+        Settings = new SettingsPageViewModel(
+            topLevelProvider,
+            composition.Backup,
+            composition.DataDirectory,
+            composition.Database.DatabasePath,
+            composition.CatalogSource);
     }
 
     public CharacterManagerViewModel Characters { get; }
@@ -20,7 +25,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public StatisticsPageViewModel Statistics { get; }
 
-    public RoadmapPageViewModel Settings { get; }
+    public SettingsPageViewModel Settings { get; }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRecordsPage))]
@@ -86,6 +91,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             await Characters.LoadAsync().ConfigureAwait(true);
+            await Statistics.LoadAsync().ConfigureAwait(true);
             StatusMessage = Characters.Rows.Count == 0
                 ? "还没有角色，先到「角色管理」添加一个。"
                 : $"已载入 {Characters.Rows.Count} 个角色。";
