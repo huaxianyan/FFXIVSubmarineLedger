@@ -6,15 +6,12 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FFXIVSubLedger.Desktop.Services;
-using FFXIVSubLedger.Infrastructure.Recognition;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
 /// <summary>
-/// 收艇记账页。负责把截图弄进来——拖入、Ctrl+V、读剪贴板、选文件——
-/// 然后跑网格检测，把切分结果叠加回图上给用户核对。
-/// 图标识别与计价属于 M3，还没接。
+/// 收艇记账页。负责把截图弄进来——拖入、Ctrl+V、读剪贴板、选文件——并预览。
+/// 日志行定位、文本识别与计价属于 M3，还没接。
 /// </summary>
 public sealed partial class RecordsPageViewModel : ObservableObject
 {
@@ -35,17 +32,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public CharacterManagerViewModel Characters { get; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Preview))]
     [NotifyPropertyChangedFor(nameof(HasImage))]
     private Bitmap? _source;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Preview))]
-    private Bitmap? _overlay;
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(Preview))]
-    private bool _showOverlay = true;
 
     [ObservableProperty]
     private string _sourceLabel = string.Empty;
@@ -57,13 +45,6 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     private string _statusMessage = string.Empty;
 
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasDetection))]
-    private string _detectionSummary = string.Empty;
-
-    [ObservableProperty]
-    private string _detectionHint = string.Empty;
-
     /// <summary>拖拽悬停中，用于把拖放区高亮出来。</summary>
     [ObservableProperty]
     private bool _isDragOver;
@@ -71,11 +52,6 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public bool HasImage => Source is not null;
 
     public bool HasStatus => StatusMessage.Length > 0;
-
-    public bool HasDetection => DetectionSummary.Length > 0;
-
-    /// <summary>预览图。勾上叠加就显示网格版，否则显示原图。</summary>
-    public Bitmap? Preview => ShowOverlay && Overlay is not null ? Overlay : Source;
 
     /// <summary>这笔收益会记到谁名下。</summary>
     public string TargetCharacterLabel
@@ -98,12 +74,9 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     private void Clear()
     {
         Source = null;
-        Overlay = null;
         SourceLabel = string.Empty;
         ImageInfo = string.Empty;
         StatusMessage = string.Empty;
-        DetectionSummary = string.Empty;
-        DetectionHint = string.Empty;
     }
 
     /// <summary>读系统剪贴板。视图层的 Ctrl+V 也走这里。</summary>
@@ -239,31 +212,6 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             CultureInfo.InvariantCulture,
             $"{bitmap.PixelSize.Width} × {bitmap.PixelSize.Height} 像素");
 
-        ScreenshotAnalyzer.AnalyzedScreenshot analyzed = ScreenshotAnalyzer.Analyze(bitmap);
-        Overlay = analyzed.Overlay;
-
-        if (analyzed.Grid is { } grid)
-        {
-            DetectionSummary = string.Create(
-                CultureInfo.InvariantCulture,
-                $"格子边长 {grid.CellSize} px · {grid.Columns} 列 × {grid.Rows} 行 · " +
-                $"{grid.OccupiedCount} 格有道具 / {grid.EmptyCount} 格空位");
-
-            string numbers = string.Create(
-                CultureInfo.InvariantCulture,
-                $"列向相关度 {grid.ColumnCorrelation:F2}，相位锐度 {grid.PhaseSharpness:F2}");
-
-            DetectionHint = grid.IsConfident
-                ? $"{numbers}。对齐可信。"
-                : $"{numbers}。偏低，请核对网格线是否贴合格子边缘。";
-
-            StatusMessage = "网格已切分。图标识别还没接上（M3），先核对格子对不对。";
-        }
-        else
-        {
-            DetectionSummary = string.Empty;
-            DetectionHint = string.Empty;
-            StatusMessage = "没检测到网格。截图里至少要包含两格完整的背包格位。";
-        }
+        StatusMessage = "截图已载入。日志行识别还没接上（M3）。";
     }
 }

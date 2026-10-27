@@ -33,8 +33,10 @@ logs/
 # Local agent workspace data
 .workbuddy-ai/
 
-# Analysis script scratch output
-tools/out/
+# 真机截图等本地开发素材，含角色名与部队信息，不入库
+dev/
+
+# Python
 __pycache__/
 
 # OS metadata

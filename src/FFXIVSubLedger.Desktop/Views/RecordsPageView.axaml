@@ -84,29 +84,14 @@
                         </StackPanel>
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
                                     VerticalAlignment="Center">
-                            <CheckBox IsChecked="{Binding ShowOverlay}"
-                                      IsEnabled="{Binding HasDetection}" Content="显示网格" />
                             <Button Content="清除" Command="{Binding ClearCommand}" />
                         </StackPanel>
                     </Grid>
 
-                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
-                            BorderBrush="#40808080" Background="#07808080"
-                            IsVisible="{Binding HasDetection}">
-                        <StackPanel Spacing="6">
-                            <TextBlock FontSize="13" FontWeight="SemiBold"
-                                       Text="{Binding DetectionSummary}" />
-                            <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                                       Text="{Binding DetectionHint}" />
-                            <TextBlock FontSize="11" Opacity="0.55" TextWrapping="Wrap"
-                                       Text="竖线画成红色、横线画成青色；被压暗的格子判为空位，不参与识别。" />
-                        </StackPanel>
-                    </Border>
-
                     <Border x:Name="PreviewPanel" Padding="10" CornerRadius="8" BorderThickness="1"
                             BorderBrush="#40808080" Background="#20808080"
                             HorizontalAlignment="Center">
-                        <Image Source="{Binding Preview}" Stretch="Uniform" MaxHeight="360" />
+                        <Image Source="{Binding Source}" Stretch="Uniform" MaxHeight="360" />
                     </Border>
                 </StackPanel>
             </Border>

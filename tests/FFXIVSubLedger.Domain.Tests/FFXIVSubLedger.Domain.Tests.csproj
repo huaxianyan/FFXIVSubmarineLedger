@@ -17,11 +17,6 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- 真实截图样本随测试复制到输出目录，供 RealBagSampleTests 读取。 -->
-    <None Include="Recognition\Samples\*.pgm" CopyToOutputDirectory="PreserveNewest" />
-  </ItemGroup>
-
-  <ItemGroup>
     <ProjectReference Include="..\..\src\FFXIVSubLedger.Domain\FFXIVSubLedger.Domain.csproj" />
     <ProjectReference Include="..\..\src\FFXIVSubLedger.Application\FFXIVSubLedger.Application.csproj" />
     <ProjectReference Include="..\..\src\FFXIVSubLedger.Infrastructure\FFXIVSubLedger.Infrastructure.csproj" />
