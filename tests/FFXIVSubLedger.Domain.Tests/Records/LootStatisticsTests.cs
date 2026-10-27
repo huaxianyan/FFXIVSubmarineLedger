@@ -77,6 +77,29 @@ public sealed class LootStatisticsTests
         Assert.Equal(100, stats.ItemsByValue.Sum(x => x.SharePercent), precision: 6);
     }
 
+    [Fact]
+    public void Compute_SplitsTotalsByCharacter()
+    {
+        Guid alice = Guid.Parse("11111111-1111-1111-1111-111111111111");
+        Guid bob = Guid.Parse("22222222-2222-2222-2222-222222222222");
+
+        var records = new List<LootRecord>
+        {
+            new() { CharacterId = alice, Date = new DateOnly(2026, 10, 27), Items = [new LootItem { ItemName = "エメラルド", Quantity = 10, UnitPrice = 2 }] },
+            new() { CharacterId = bob, Date = new DateOnly(2026, 10, 27), Items = [new LootItem { ItemName = "エメラルド", Quantity = 30, UnitPrice = 2 }] },
+            new() { CharacterId = bob, Date = new DateOnly(2026, 10, 28), Items = [new LootItem { ItemName = "エメラルド", Quantity = 40, UnitPrice = 2 }] },
+        };
+
+        LootStatisticsSnapshot stats = LootStatistics.Compute(records);
+
+        Assert.Equal(2, stats.ByCharacter.Count);
+        Assert.Equal(bob, stats.ByCharacter[0].CharacterId);
+        Assert.Equal(140, stats.ByCharacter[0].TotalValue);
+        Assert.Equal(2, stats.ByCharacter[0].RecordCount);
+        Assert.Equal(20, stats.ByCharacter[1].TotalValue);
+        Assert.Equal(100, stats.ByCharacter.Sum(x => x.SharePercent), precision: 6);
+    }
+
     private static LootRecord Record(DateOnly date, params (string Name, int UnitPrice, int Quantity)[] items)
     {
         return new LootRecord

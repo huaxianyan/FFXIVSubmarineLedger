@@ -9,6 +9,13 @@ namespace FFXIVSubLedger.Application.Records;
 /// <param name="SharePercent">占总收益的百分比，0–100。</param>
 public sealed record LootStatisticsItem(string ItemName, int Quantity, int TotalValue, double SharePercent);
 
+/// <summary>按角色拆分后的收益占比。</summary>
+/// <param name="CharacterId">角色 ID。</param>
+/// <param name="RecordCount">该角色的收艇次数。</param>
+/// <param name="TotalValue">该角色的总收益。</param>
+/// <param name="SharePercent">占总收益的百分比，0–100。</param>
+public sealed record LootStatisticsCharacter(Guid CharacterId, int RecordCount, int TotalValue, double SharePercent);
+
 /// <summary>统计页要用的所有数。</summary>
 /// <param name="TotalValue">历史总收益。</param>
 /// <param name="RecordCount">收艇次数，即记录条数。</param>
@@ -20,6 +27,7 @@ public sealed record LootStatisticsItem(string ItemName, int Quantity, int Total
 /// <param name="AveragePerMonth">月均 = 总收益 ÷ 跨越的日历月数。</param>
 /// <param name="AveragePerYear">年均 = 总收益 ÷ 跨越的日历年数。</param>
 /// <param name="ItemsByValue">按收益降序的道具占比。</param>
+/// <param name="ByCharacter">按收益降序的角色占比。</param>
 public sealed record LootStatisticsSnapshot(
     int TotalValue,
     int RecordCount,
@@ -30,7 +38,8 @@ public sealed record LootStatisticsSnapshot(
     double AveragePerDay,
     double AveragePerMonth,
     double AveragePerYear,
-    IReadOnlyList<LootStatisticsItem> ItemsByValue);
+    IReadOnlyList<LootStatisticsItem> ItemsByValue,
+    IReadOnlyList<LootStatisticsCharacter> ByCharacter);
 
 /// <summary>
 /// 统计口径。这里只用已经落库的记录，不含未确认的截图。
@@ -45,7 +54,7 @@ public static class LootStatistics
         ArgumentNullException.ThrowIfNull(records);
 
         if (records.Count == 0)
-            return new LootStatisticsSnapshot(0, 0, 0, 0, null, null, 0, 0, 0, []);
+            return new LootStatisticsSnapshot(0, 0, 0, 0, null, null, 0, 0, 0, [], []);
 
         int total = records.Sum(x => x.TotalValue);
         DateOnly first = records.Min(x => x.Date);
@@ -67,6 +76,16 @@ public static class LootStatistics
             .ThenBy(x => x.ItemName, StringComparer.Ordinal)
             .ToList();
 
+        var byCharacter = records
+            .GroupBy(x => x.CharacterId)
+            .Select(group => new LootStatisticsCharacter(
+                group.Key,
+                group.Count(),
+                group.Sum(x => x.TotalValue),
+                total == 0 ? 0 : group.Sum(x => x.TotalValue) * 100.0 / total))
+            .OrderByDescending(x => x.TotalValue)
+            .ToList();
+
         return new LootStatisticsSnapshot(
             total,
             records.Count,
@@ -77,6 +96,7 @@ public static class LootStatistics
             (double)total / operatingDays,
             (double)total / months,
             (double)total / years,
-            items);
+            items,
+            byCharacter);
     }
 }
