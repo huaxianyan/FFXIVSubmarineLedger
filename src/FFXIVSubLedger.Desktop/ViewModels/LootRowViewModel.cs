@@ -24,7 +24,8 @@ public sealed partial class LootRowViewModel : ObservableObject
         _quantity = loot.Quantity;
         _isHighQuality = loot.IsHighQuality;
         _unitPriceOverride = 0;
-        _isIncluded = loot.IsKnown;
+        // 词表外的物名也是真收益，默认勾上，只差一个单价；否则整批都未知时界面看着像「什么都没读到」。
+        _isIncluded = true;
     }
 
     public int LineNumber { get; }

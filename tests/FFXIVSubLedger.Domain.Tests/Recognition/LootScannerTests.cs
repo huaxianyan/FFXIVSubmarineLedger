@@ -13,6 +13,7 @@ public sealed class LootScannerTests
         new LootCatalogEntry(23222, "海産油脂", 1, false),
         new LootCatalogEntry(5189, "エメラルド", 2, true),
         new LootCatalogEntry(5069, "ゴールドインゴット", 4, true),
+        new LootCatalogEntry(5187, "ルビー", 2, true),
     ]);
 
     [Fact]
@@ -125,6 +126,28 @@ public sealed class LootScannerTests
         Assert.Equal(2, loot.Count);
         Assert.Equal("Strawberry", loot[0].SubmarineName);
         Assert.Null(loot[1].SubmarineName);
+    }
+
+    [Fact]
+    public void Scan_ReadsTheChatLogFormEndToEnd()
+    {
+        // 真实聊天框的一批：HQ 用 [HQ] 后缀，艇名在收益行之后。
+        string[] lines =
+        [
+            "[10:45] テストさんはルビー×28を入手した。",
+            "[10:45] テストさんはルビー[HQ]×29を入手した。",
+            "[10:45] 潜水艦「Strawberry」の探索完了を確認しました。",
+        ];
+
+        IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(lines, Catalog);
+
+        Assert.Equal(2, loot.Count);
+        Assert.False(loot[0].IsHighQuality);
+        Assert.Equal(2, loot[0].UnitPrice);
+
+        Assert.True(loot[1].IsHighQuality);
+        Assert.Equal(3, loot[1].UnitPrice);
+        Assert.Equal("Strawberry", loot[1].SubmarineName);
     }
 
     [Fact]

@@ -21,6 +21,12 @@ internal static class Program
             return;
         }
 
+        if (DumpChatDiagCommand.TryParse(args, out string diagOutput))
+        {
+            DumpChatDiagCommand.Run(diagOutput);
+            return;
+        }
+
         if (DumpChatCommand.TryParse(args, out string chatOutput))
         {
             DumpChatCommand.Run(chatOutput);

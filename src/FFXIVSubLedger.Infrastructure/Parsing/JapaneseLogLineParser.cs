@@ -35,6 +35,12 @@ public static class JapaneseLogLineParser
     /// <summary>物名前面的物品链接标记。</summary>
     private const string LinkMarkers = "▶►▸▷pb";
 
+    /// <summary>
+    /// 聊天框直读时 HQ 写成物名后缀 <c>[HQ]</c>（截图里的渲染是 <c>◉</c>）。
+    /// 两种都要认，否则物名会带上 [HQ] 而匹配不上词表、价格整个丢掉。
+    /// </summary>
+    private static readonly string[] HighQualitySuffixes = ["[HQ]", "［HQ］", "[hq]", "［hq］"];
+
     /// <summary>角色名最多这么长，再往后出现的「は」属于物名。</summary>
     private const int ActorNameLimit = 40;
 
@@ -99,6 +105,16 @@ public static class JapaneseLogLineParser
             return false;
 
         rest = rest.TrimStart(LinkMarkers.ToCharArray());
+
+        foreach (string suffix in HighQualitySuffixes)
+        {
+            if (!rest.EndsWith(suffix, StringComparison.Ordinal))
+                continue;
+
+            looksHighQuality = true;
+            rest = rest[..^suffix.Length];
+            break;
+        }
 
         if (rest.Length == 0)
             return false;

@@ -8,6 +8,8 @@ public sealed class JapaneseLogLineParserTests
     // 这两条来自真实聊天框的内存读取结果（角色名已替换）。它们没有截图里的 ▶ 标记，
     // 「×」也更接近半角，解析器要两种都吃得下。
     [InlineData("[16:11] テストさんは転送網利用券:蒼天街×10を入手した。", "転送網利用券:蒼天街", 10)]
+    // 聊天框直读时 HQ 写成物名后缀 [HQ]（截图渲染则是 ◉），不能让它混进物名。
+    [InlineData("[10:45] テストさんはルビー[HQ]×29を入手した。", "ルビー", 29)]
     [InlineData("[11:40] テストさんは p沈没船の高級首飾りX5を入手した。", "沈没船の高級首飾り", 5)]
     [InlineData("[11:40] テストさんは p海産油脂X 3を入手した。", "海産油脂", 3)]
     [InlineData("[11:41] テストさんは pルビー※ 30を入手した。", "ルビー", 30)]
@@ -19,6 +21,18 @@ public sealed class JapaneseLogLineParserTests
         Assert.Equal(item, parsed.ItemText);
         Assert.Equal(quantity, parsed.Quantity);
         Assert.Equal(line, parsed.RawLine);
+    }
+
+    [Fact]
+    public void TryParse_SeesTheHighQualitySuffixUsedByTheChatLog()
+    {
+        Assert.True(JapaneseLogLineParser.TryParse(
+            "[10:45] テストさんはルビー[HQ]×29を入手した。",
+            out LootLine parsed));
+
+        Assert.Equal("ルビー", parsed.ItemText);
+        Assert.Equal(29, parsed.Quantity);
+        Assert.True(parsed.LooksHighQuality);
     }
 
     [Fact]

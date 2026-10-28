@@ -1,14 +1,146 @@
 [
-  { "itemId": 22500, "name": "沈没船の指輪", "shopPriceNq": 8000, "canBeHq": false },
-  { "itemId": 22501, "name": "沈没船の腕輪", "shopPriceNq": 9000, "canBeHq": false },
-  { "itemId": 22502, "name": "沈没船の耳飾り", "shopPriceNq": 10000, "canBeHq": false },
-  { "itemId": 22503, "name": "沈没船の首飾り", "shopPriceNq": 13000, "canBeHq": false },
-  { "itemId": 22504, "name": "沈没船の高級指輪", "shopPriceNq": 27000, "canBeHq": false },
-  { "itemId": 22505, "name": "沈没船の高級腕輪", "shopPriceNq": 28500, "canBeHq": false },
-  { "itemId": 22506, "name": "沈没船の高級耳飾り", "shopPriceNq": 30000, "canBeHq": false },
-  { "itemId": 22507, "name": "沈没船の高級首飾り", "shopPriceNq": 34500, "canBeHq": false },
-  { "itemId": 23222, "name": "海産油脂", "shopPriceNq": 1, "canBeHq": false },
-  { "itemId": 5069, "name": "ゴールドインゴット", "shopPriceNq": 4, "canBeHq": true },
-  { "itemId": 5187, "name": "ルビー", "shopPriceNq": 2, "canBeHq": true },
-  { "itemId": 5189, "name": "エメラルド", "shopPriceNq": 2, "canBeHq": true }
+  {
+    "itemId": 5069,
+    "name": "ゴールドインゴット",
+    "shopPriceNq": 4,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5168,
+    "name": "ジェード",
+    "shopPriceNq": 1,
+    "canBeHq": false
+  },
+  {
+    "itemId": 5173,
+    "name": "フローライト",
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5177,
+    "name": "ペリドット",
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5179,
+    "name": "アメジスト",
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5180,
+    "name": "アクアマリン",
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5187,
+    "name": "ルビー",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5188,
+    "name": "ダイヤモンド",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5189,
+    "name": "エメラルド",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5190,
+    "name": "トパーズ",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5191,
+    "name": "アイオライト",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5192,
+    "name": "サファイア",
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12544,
+    "name": "スタールビー",
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12545,
+    "name": "スターサファイア",
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12546,
+    "name": "オパール",
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 22500,
+    "name": "沈没船の指輪",
+    "shopPriceNq": 8000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22501,
+    "name": "沈没船の腕輪",
+    "shopPriceNq": 9000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22502,
+    "name": "沈没船の耳飾り",
+    "shopPriceNq": 10000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22503,
+    "name": "沈没船の首飾り",
+    "shopPriceNq": 13000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22504,
+    "name": "沈没船の高級指輪",
+    "shopPriceNq": 27000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22505,
+    "name": "沈没船の高級腕輪",
+    "shopPriceNq": 28500,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22506,
+    "name": "沈没船の高級耳飾り",
+    "shopPriceNq": 30000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22507,
+    "name": "沈没船の高級首飾り",
+    "shopPriceNq": 34500,
+    "canBeHq": false
+  },
+  {
+    "itemId": 23222,
+    "name": "海産油脂",
+    "shopPriceNq": 1,
+    "canBeHq": false
+  }
 ]

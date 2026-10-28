@@ -424,7 +424,17 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 IReadOnlyList<string> lines = await Task.Run(_chat.ReadNewLines, token).ConfigureAwait(true);
 
                 if (lines.Count > 0)
-                    MergeChatLines(lines);
+                {
+                    IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
+                    OcrSummary = string.Create(CultureInfo.InvariantCulture, $"监听中 · 聊天框 {lines.Count} 行");
+
+                    if (added.Count > 0)
+                    {
+                        StatusMessage = string.Create(
+                            CultureInfo.InvariantCulture,
+                            $"监听中：本次读到 {added.Count} 条入手行，已累计 {LootRows.Count} 行待核对。");
+                    }
+                }
 
                 await Task.Delay(WatchInterval, token).ConfigureAwait(true);
             }
@@ -455,15 +465,15 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// 所以必须去重；去重按「同一句话的出现次数」算，因为同一种道具分两行入包时
     /// 日志里就是两条一模一样的行，第二条也是真收益。
     /// </summary>
-    private int MergeChatLines(IReadOnlyList<string> lines)
+    private IReadOnlyList<RecognizedLoot> MergeChatLines(IReadOnlyList<string> lines)
     {
         IReadOnlyList<string> fresh = _deduplicator.TakeNew(lines);
         if (fresh.Count == 0)
-            return 0;
+            return [];
 
         IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(fresh, _catalog.Value);
         if (loot.Count == 0)
-            return 0;
+            return [];
 
         // 只追加，不清空：用户可能已经改过前面几行的数量或品质。
         foreach (RecognizedLoot entry in loot)
@@ -474,7 +484,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         }
 
         RefreshLootTotals();
-        return loot.Count;
+        return loot;
     }
 
     /// <summary>
@@ -498,17 +508,22 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
             if (lines.Count == 0)
             {
-                StatusMessage = "聊天框里没有新内容。先收艇，让入手记录出现在聊天框里再读。";
+                StatusMessage = "没读到聊天内容。确认游戏在运行且角色已登录，然后重试。";
                 return;
             }
 
             OcrText = string.Join(Environment.NewLine, lines);
             OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容");
 
-            int added = MergeChatLines(lines);
-            StatusMessage = added == 0
-                ? "聊天内容里没有新的入手记录。"
-                : "逐行核对数量与品质，确认后写账。";
+            IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
+            int unknown = added.Count(x => !x.IsKnown);
+            string unknownNote = unknown > 0 ? $"（其中 {unknown} 条词表里没有，需手填单价）" : string.Empty;
+
+            StatusMessage = added.Count == 0
+                ? string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容，但没有新的入手行。")
+                : string.Create(
+                    CultureInfo.InvariantCulture,
+                    $"读到 {lines.Count} 行聊天内容，认出 {added.Count} 条入手行{unknownNote}。逐行核对后写账。");
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
