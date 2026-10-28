@@ -16,6 +16,8 @@ public sealed class SqliteDatabase
             DataSource = databasePath,
             Mode = SqliteOpenMode.ReadWriteCreate,
             Pooling = true,
+            // 库被别的进程占着时，宁可快点失败也别让启动卡半分钟（用户会以为程序死了）。
+            DefaultTimeout = 5,
         }.ToString();
     }
 
