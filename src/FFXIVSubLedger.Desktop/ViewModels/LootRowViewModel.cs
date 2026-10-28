@@ -14,11 +14,17 @@ public sealed partial class LootRowViewModel : ObservableObject
 {
     private readonly IReadOnlyList<LootCatalogEntry> _candidates;
 
-    public LootRowViewModel(RecognizedLoot loot)
+    /// <param name="loot">识别结果。</param>
+    /// <param name="submarineChoices">本次读取里出现过的艇，供人工纠正归属。</param>
+    public LootRowViewModel(RecognizedLoot loot, IReadOnlyList<SubmarineChoice> submarineChoices)
     {
+        SubmarineChoices = submarineChoices;
+        _selectedSubmarine = loot.SubmarineName is { Length: > 0 } name
+            ? submarineChoices.FirstOrDefault(x => x.Name == name) ?? new SubmarineChoice(name, name)
+            : submarineChoices[0];
+
         LineNumber = loot.LineNumber;
         ItemText = loot.ItemText;
-        SubmarineName = loot.SubmarineName;
         _candidates = loot.Candidates;
         SelectedItem = loot.Item;
         _quantity = loot.Quantity;
@@ -30,8 +36,19 @@ public sealed partial class LootRowViewModel : ObservableObject
 
     public int LineNumber { get; }
 
-    /// <summary>这批收益属于哪艘艇。日志里没等到「探索完了」行时为 null。</summary>
-    public string? SubmarineName { get; }
+    /// <summary>这一行属于哪艘艇的可选项。日志里的艇名会作为默认值。</summary>
+    public IReadOnlyList<SubmarineChoice> SubmarineChoices { get; }
+
+    /// <summary>
+    /// 归属的艇。识别可能把相邻两艘艇的收益串在一起（收益行文本完全相同时尤其容易），
+    /// 所以这里必须能人工改。空串表示未标明。
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(SubmarineName))]
+    [NotifyPropertyChangedFor(nameof(SubmarineLabel))]
+    private SubmarineChoice _selectedSubmarine;
+
+    public string? SubmarineName => string.IsNullOrEmpty(SelectedSubmarine.Name) ? null : SelectedSubmarine.Name;
 
     /// <summary>OCR 读出的原始物名。没命中词表时靠它判断。</summary>
     public string ItemText { get; }
@@ -41,7 +58,7 @@ public sealed partial class LootRowViewModel : ObservableObject
 
     public bool HasCandidateChoice => _candidates.Count > 1;
 
-    public string SubmarineLabel => SubmarineName is { Length: > 0 } name ? name : "未标明艇";
+    public string SubmarineLabel => SubmarineName ?? "未标明艇";
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemName))]

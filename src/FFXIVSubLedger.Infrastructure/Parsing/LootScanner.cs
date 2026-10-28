@@ -14,6 +14,7 @@ namespace FFXIVSubLedger.Infrastructure.Parsing;
 /// <param name="IsHighQuality">是否 HQ。乘以 HQ 价的依据。</param>
 /// <param name="UnitPrice">单位卖店价。没命中时为 0，等用户补。</param>
 /// <param name="SubmarineName">这批收益属于哪艘艇。日志里没等到「探索完了」行为 null。</param>
+/// <param name="RawLine">产生这条记录的原始日志行，用于去重与排查。</param>
 public sealed record RecognizedLoot(
     int LineNumber,
     string ItemText,
@@ -24,7 +25,8 @@ public sealed record RecognizedLoot(
     int Quantity,
     bool IsHighQuality,
     int UnitPrice,
-    string? SubmarineName)
+    string? SubmarineName,
+    string RawLine)
 {
     public bool IsKnown => Item is not null;
 
@@ -40,7 +42,14 @@ public sealed record RecognizedLoot(
 /// </summary>
 public static class LootScanner
 {
-    public static IReadOnlyList<RecognizedLoot> Scan(IReadOnlyList<string> lines, ItemCatalog catalog)
+    /// <param name="includeUnattributed">
+    /// 是否把「等不到艇名」的入手行也交给调用方。一次性读取给 true（历史里可能真缺「探索完了」行）；
+    /// 监听轮询给 false——那些行多半只是还没等到归属，下一轮就能拿到正确的艇，早结算反而会记错艇。
+    /// </param>
+    public static IReadOnlyList<RecognizedLoot> Scan(
+        IReadOnlyList<string> lines,
+        ItemCatalog catalog,
+        bool includeUnattributed = true)
     {
         ArgumentNullException.ThrowIfNull(lines);
         ArgumentNullException.ThrowIfNull(catalog);
@@ -63,8 +72,10 @@ public static class LootScanner
                 pending.Add((index + 1, parsed));
         }
 
-        // 整段读完还有没等到归属的，也照样给出来，归属留空由用户判断。
-        Flush(pending, submarineName: null, catalog, results);
+        // 整段读完还有没等到归属的：一次性读取照样给出来（归属留空），
+        // 监听轮询则压着不给，等下一轮「探索完了」行到了再算。
+        if (includeUnattributed)
+            Flush(pending, submarineName: null, catalog, results);
 
         return results;
     }
@@ -91,7 +102,8 @@ public static class LootScanner
                     parsed.Quantity,
                     false,
                     0,
-                    submarineName));
+                    submarineName,
+                    parsed.RawLine));
                 continue;
             }
 
@@ -108,7 +120,8 @@ public static class LootScanner
                 parsed.Quantity,
                 highQuality,
                 ShopPrice.For(item.ShopPriceNq, highQuality),
-                submarineName));
+                submarineName,
+                parsed.RawLine));
         }
     }
 }

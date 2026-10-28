@@ -33,8 +33,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
 
-    /// <summary>已处理过的聊天行，用于去重（同一句话可能合法地出现多次）。</summary>
-    private readonly LineDeduplicator _deduplicator = new();
+    /// <summary>已落成记录的入手行，避免同一批历史被重复加入。</summary>
+    private readonly LootAccumulator _accumulator = new();
 
     private CancellationTokenSource? _watchCancellation;
 
@@ -474,18 +474,20 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// </summary>
     private IReadOnlyList<RecognizedLoot> MergeChatLines(IReadOnlyList<string> lines)
     {
-        IReadOnlyList<string> fresh = _deduplicator.TakeNew(lines);
-        if (fresh.Count == 0)
-            return [];
-
-        IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(fresh, _catalog.Value);
+        // 归属必须在**整段有序缓冲**上算：只看新出现的那几行，往往拿不到后面那行「探索完了」，
+        // 归属就会从错误的上文里算出来（实测把 Cranberry 的一笔记到了 Blackberry）。
+        // 还没等到艇名的行先不结算，等下一轮有了归属再算。
+        IReadOnlyList<RecognizedLoot> all = LootScanner.Scan(lines, _catalog.Value, includeUnattributed: false);
+        IReadOnlyList<RecognizedLoot> loot = _accumulator.TakeNew(all);
         if (loot.Count == 0)
             return [];
+
+        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(loot);
 
         // 只追加，不清空：用户可能已经改过前面几行的数量或品质。
         foreach (RecognizedLoot entry in loot)
         {
-            LootRowViewModel row = new(entry);
+            LootRowViewModel row = new(entry, choices);
             row.PropertyChanged += OnLootRowChanged;
             LootRows.Add(row);
         }
@@ -544,15 +546,35 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     private void ReplaceRows(IReadOnlyList<RecognizedLoot> loot)
     {
+        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(loot);
+
         LootRows.Clear();
         foreach (RecognizedLoot entry in loot)
         {
-            LootRowViewModel row = new(entry);
+            LootRowViewModel row = new(entry, choices);
             row.PropertyChanged += OnLootRowChanged;
             LootRows.Add(row);
         }
 
         RefreshLootTotals();
+    }
+
+    /// <summary>
+    /// 确认行里可选的艇：本批出现过的艇 + 「未标明艇」。
+    /// 识别把两艘艇的收益串在一起时，用户能在这里改回去。
+    /// </summary>
+    private static IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(IReadOnlyList<RecognizedLoot> loot)
+    {
+        List<SubmarineChoice> choices = [new(string.Empty, "未标明艇")];
+
+        choices.AddRange(loot
+            .Select(x => x.SubmarineName)
+            .Where(name => name is { Length: > 0 })
+            .Distinct(StringComparer.Ordinal)
+            .Order(StringComparer.Ordinal)
+            .Select(name => new SubmarineChoice(name!, name!)));
+
+        return choices;
     }
 
     private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLootTotals();
