@@ -13,20 +13,33 @@ public static class StartupDiagnostics
 
     public static void Record(string message)
     {
-        try
-        {
-            string path = LogPath;
-            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        string line = string.Create(
+            System.Globalization.CultureInfo.InvariantCulture,
+            $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
 
-            string line = string.Create(
-                System.Globalization.CultureInfo.InvariantCulture,
-                $"{DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss} {message}{Environment.NewLine}");
-
-            File.AppendAllText(path, line);
-        }
-        catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+        // 两个实例同时写是常态（第二个实例也要留痕），所以共享写、失败重试几次，
+        // 别因为文件被占着就把这一行丢掉——丢掉的往往正是出事那一次。
+        for (int attempt = 0; attempt < 5; attempt++)
         {
-            // 记日志本身失败不该再抛：这条路已经是在处理故障了。
+            try
+            {
+                string path = LogPath;
+                Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+                using var stream = new FileStream(
+                    path,
+                    FileMode.Append,
+                    FileAccess.Write,
+                    FileShare.ReadWrite | FileShare.Delete);
+
+                using var writer = new StreamWriter(stream);
+                writer.Write(line);
+                return;
+            }
+            catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)
+            {
+                Thread.Sleep(50);
+            }
         }
     }
 
@@ -34,8 +47,11 @@ public static class StartupDiagnostics
         Record($"{stage} 失败：{exception}");
 
     /// <summary>弹一个系统消息框。只能用 Win32：这时候 Avalonia 可能还没起来。</summary>
-    public static void ShowError(string title, string message) =>
-        MessageBoxW(nint.Zero, message, title, MbIconError | MbSetForeground);
+    public static void ShowError(string title, string message)
+    {
+        int result = MessageBoxW(nint.Zero, message, title, MbIconError | MbSetForeground);
+        Record($"消息框返回 {result}");
+    }
 
     private const uint MbIconError = 0x00000010;
     private const uint MbSetForeground = 0x00010000;

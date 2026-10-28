@@ -74,6 +74,10 @@ powershell -File tools/publish.ps1
 
 产物是 `artifacts/FFXIVSubmarineLedger-<版本>.zip` 与同名 `.sha256`。自包含发布，目标机器不需要装 .NET。
 
+**跑的时候解压出来跑，别直接双击 `artifacts/publish` 里的 exe**：那是打包用的中转目录，每次打包都会被整个删掉重建，在里面运行会遇上文件被替换的怪问题。解压后的目录（比如 `artifacts/run`）才是给人用的。
+
+启动有问题时看 `%LocalAppData%\FFXIVSubmarineLedger\logs\startup.log`，它记录了启动走到了哪一步。显卡驱动有问题导致界面不出来时，加 `--software-render` 参数用软件渲染再试。
+
 **不用单文件发布**：Tesseract 的本地库加载器靠当前程序位置拼路径，单文件打包后那是空值，启动即崩。这一点已实测确认。
 
 ## 界面

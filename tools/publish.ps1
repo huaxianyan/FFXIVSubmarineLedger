@@ -36,6 +36,13 @@ if ([string]::IsNullOrWhiteSpace($Version)) {
 
 Write-Host "版本 $Version"
 
+# 程序在跑的时候覆盖它的 exe 会得到「文件被占用」或者一个半新半旧的目录，两种都很难查。
+$running = Get-Process -Name 'FFXIVSubmarineLedger' -ErrorAction SilentlyContinue
+if ($running) {
+    $ids = ($running | ForEach-Object { $_.Id }) -join ', '
+    throw "程序还在运行（进程 $ids），先关掉再打包。"
+}
+
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
 
 dotnet publish (Join-Path $root 'src/FFXIVSubmarineLedger.Desktop/FFXIVSubmarineLedger.Desktop.csproj') `

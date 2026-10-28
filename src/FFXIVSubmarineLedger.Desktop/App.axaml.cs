@@ -10,7 +10,12 @@ namespace FFXIVSubmarineLedger.Desktop;
 // 这里必须写全限定名：本项目的 FFXIVSubmarineLedger.Application 命名空间会遮蔽 Avalonia.Application。
 public partial class App : Avalonia.Application
 {
-    public override void Initialize() => AvaloniaXamlLoader.Load(this);
+    public override void Initialize()
+    {
+        StartupDiagnostics.Record("App.Initialize 开始（XAML 载入前）");
+        AvaloniaXamlLoader.Load(this);
+        StartupDiagnostics.Record("App.Initialize 完成");
+    }
 
     public override void OnFrameworkInitializationCompleted()
     {
@@ -19,7 +24,9 @@ public partial class App : Avalonia.Application
             // 先建窗口、先让窗口显示出来，再去打开数据库。
             // 库里被别的进程占着时（比如上次的实例没退干净），开库会等锁——那段时间窗口还不在，
             // 用户看到的就是「进程在跑，界面不出来」。把顺序倒过来，至少界面先出现、状态栏能说话。
+            StartupDiagnostics.Record("OnFrameworkInitializationCompleted：准备建窗口");
             MainWindow window = new();
+            StartupDiagnostics.Record("主窗口已建，交给生命周期");
             desktop.MainWindow = window;
 
             window.Opened += async (_, _) =>
