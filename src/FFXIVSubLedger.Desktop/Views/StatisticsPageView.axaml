@@ -6,47 +6,8 @@
              x:Class="FFXIVSubLedger.Desktop.Views.StatisticsPageView"
              x:DataType="vm:StatisticsPageViewModel"
              x:CompileBindings="True">
-    <Grid RowDefinitions="Auto,*">
-
-        <!-- 筛选固定在上方：滚到底也一直能改 -->
-        <Border Grid.Row="0" Margin="28,20,28,0" Padding="16" CornerRadius="10" BorderThickness="1"
-                BorderBrush="#40808080" Background="#0A808080">
-            <StackPanel Spacing="8">
-                <StackPanel Orientation="Horizontal" Spacing="14">
-                    <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="{loc:Tr stats.filter}" />
-
-                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="{loc:Tr stats.character}" />
-                    <ComboBox FontSize="12" MinWidth="200"
-                              ItemsSource="{Binding CharacterOptions}"
-                              SelectedItem="{Binding SelectedCharacter}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FilterOption">
-                                <TextBlock FontSize="12" Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="{loc:Tr stats.submarine}" />
-                    <ComboBox FontSize="12" MinWidth="180"
-                              IsEnabled="{Binding CanFilterBySubmarine}"
-                              ItemsSource="{Binding SubmarineOptions}"
-                              SelectedItem="{Binding SelectedSubmarine}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FilterOption">
-                                <TextBlock FontSize="12" Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
-
-                <!-- 说明单独成行并换行：日文比中文长，挤在控件行里会溢出窗口 -->
-                <TextBlock FontSize="11" Opacity="0.45" TextWrapping="Wrap"
-                           Text="{loc:Tr stats.subFilterHint}" />
-            </StackPanel>
-        </Border>
-
-        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
-            <StackPanel Margin="28,14,28,28" Spacing="14">
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+        <StackPanel Margin="28" Spacing="14">
 
             <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12">
                 <Border Grid.Column="0" Padding="16" CornerRadius="10" BorderThickness="1"
@@ -224,7 +185,6 @@
                 <TextBlock FontSize="13" Opacity="0.7" TextWrapping="Wrap"
                            Text="{loc:Tr stats.empty}" />
             </Border>
-            </StackPanel>
-        </ScrollViewer>
-    </Grid>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

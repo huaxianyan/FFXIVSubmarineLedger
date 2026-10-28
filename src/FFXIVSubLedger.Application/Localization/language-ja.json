@@ -110,7 +110,6 @@
   "records.saveFailed": "記録に失敗しました：{0}",
   "row.priceLabel": "@ {0} = {1}",
   "row.unknownPriceHint": "品名表にないため、単価を入力すると記録できます",
-  "stats.filter": "絞り込み",
   "stats.character": "キャラクター",
   "stats.submarine": "潜水艦",
   "stats.subFilterHint": "潜水艦名はキャラクター内でのみ一意なため、先にキャラクターを選んでください。",

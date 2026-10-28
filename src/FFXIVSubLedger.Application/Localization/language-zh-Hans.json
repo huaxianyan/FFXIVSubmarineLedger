@@ -110,7 +110,6 @@
   "records.saveFailed": "写账失败：{0}",
   "row.priceLabel": "@ {0} = {1}",
   "row.unknownPriceHint": "词表里没有，填单价后才入账",
-  "stats.filter": "筛选",
   "stats.character": "角色",
   "stats.submarine": "艇",
   "stats.subFilterHint": "艇名只在角色范围内唯一，所以筛艇要先选角色。",
