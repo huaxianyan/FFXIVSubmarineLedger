@@ -72,6 +72,64 @@
                 </StackPanel>
             </Border>
 
+            <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080"
+                    IsVisible="{Binding HasLootRows}">
+                <StackPanel Spacing="10">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" Text="{Binding LootSummary}" />
+                        <Button Grid.Column="1" Content="记入账"
+                                Command="{Binding SaveCommand}" />
+                    </Grid>
+
+                    <ItemsControl ItemsSource="{Binding LootRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:LootRowViewModel">
+                                <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10"
+                                      Margin="0,4">
+                                    <CheckBox Grid.Column="0" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsIncluded}" />
+
+                                    <StackPanel Grid.Column="1" Spacing="2">
+                                        <TextBlock FontSize="12" TextWrapping="Wrap"
+                                                   Text="{Binding ItemName}" />
+                                        <TextBlock FontSize="11" Opacity="0.4" TextWrapping="Wrap"
+                                                   Text="{Binding ItemText}" />
+                                        <ComboBox FontSize="11" MinWidth="240"
+                                                  IsVisible="{Binding HasCandidateChoice}"
+                                                  ItemsSource="{Binding Candidates}"
+                                                  SelectedItem="{Binding SelectedItem}">
+                                            <ComboBox.ItemTemplate>
+                                                <DataTemplate x:DataType="domain:LootCatalogEntry">
+                                                    <TextBlock FontSize="11" Text="{Binding Name}" />
+                                                </DataTemplate>
+                                            </ComboBox.ItemTemplate>
+                                        </ComboBox>
+                                    </StackPanel>
+
+                                    <NumericUpDown Grid.Column="2" Width="104" Minimum="1" Increment="1"
+                                                   FormatString="0" VerticalAlignment="Center"
+                                                   Value="{Binding Quantity}" />
+
+                                    <CheckBox Grid.Column="3" Content="HQ" VerticalAlignment="Center"
+                                              IsChecked="{Binding IsHighQuality}"
+                                              IsEnabled="{Binding CanBeHighQuality}" />
+
+                                    <StackPanel Grid.Column="4" Spacing="2" VerticalAlignment="Center">
+                                        <TextBlock FontSize="11" Opacity="0.8"
+                                                   Text="{Binding PriceLabel}" />
+                                        <NumericUpDown Width="120" Minimum="0" Increment="1" FormatString="0"
+                                                       IsVisible="{Binding IsUnknown}"
+                                                       Value="{Binding UnitPriceOverride}" />
+                                    </StackPanel>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
             <Border Padding="18" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#0A808080"
                     IsVisible="{Binding HasImage}">
@@ -106,77 +164,6 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
-                            BorderBrush="#40808080" Background="#07808080"
-                            IsVisible="{Binding HasLootRows}">
-                        <StackPanel Spacing="10">
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
-                                           TextWrapping="Wrap" Text="{Binding LootSummary}" />
-                                <Button Grid.Column="1" Content="记入账"
-                                        Command="{Binding SaveCommand}" />
-                            </Grid>
-
-                            <ItemsControl ItemsSource="{Binding LootRows}">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate x:DataType="vm:LootRowViewModel">
-                                        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto" ColumnSpacing="10"
-                                              Margin="0,4">
-                                            <CheckBox Grid.Column="0" VerticalAlignment="Center"
-                                                      IsChecked="{Binding IsIncluded}" />
-
-                                            <StackPanel Grid.Column="1" Spacing="2">
-                                                <TextBlock FontSize="12" TextWrapping="Wrap"
-                                                           Text="{Binding ItemName}" />
-                                                <TextBlock FontSize="11" Opacity="0.4" TextWrapping="Wrap"
-                                                           Text="{Binding ItemText}" />
-                                                <ComboBox FontSize="11" MinWidth="240"
-                                                          IsVisible="{Binding HasCandidateChoice}"
-                                                          ItemsSource="{Binding Candidates}"
-                                                          SelectedItem="{Binding SelectedItem}">
-                                                    <ComboBox.ItemTemplate>
-                                                        <DataTemplate x:DataType="domain:LootCatalogEntry">
-                                                            <TextBlock FontSize="11" Text="{Binding Name}" />
-                                                        </DataTemplate>
-                                                    </ComboBox.ItemTemplate>
-                                                </ComboBox>
-                                            </StackPanel>
-
-                                            <NumericUpDown Grid.Column="2" Width="104" Minimum="1" Increment="1"
-                                                           FormatString="0" VerticalAlignment="Center"
-                                                           Value="{Binding Quantity}" />
-
-                                            <CheckBox Grid.Column="3" Content="HQ" VerticalAlignment="Center"
-                                                      IsChecked="{Binding IsHighQuality}"
-                                                      IsEnabled="{Binding CanBeHighQuality}" />
-
-                                            <StackPanel Grid.Column="4" Spacing="2" VerticalAlignment="Center">
-                                                <TextBlock FontSize="11" Opacity="0.8"
-                                                           Text="{Binding PriceLabel}" />
-                                                <NumericUpDown Width="120" Minimum="0" Increment="1" FormatString="0"
-                                                               IsVisible="{Binding IsUnknown}"
-                                                               Value="{Binding UnitPriceOverride}" />
-                                            </StackPanel>
-                                        </Grid>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </Border>
-
-                    <Border Padding="14" CornerRadius="8" BorderThickness="1"
-                            BorderBrush="#40808080" Background="#07808080"
-                            IsVisible="{Binding HasOcrSummary}">
-                        <StackPanel Spacing="8">
-                            <TextBlock FontSize="13" FontWeight="SemiBold"
-                                       Text="{Binding OcrSummary}" />
-                            <ScrollViewer MaxHeight="200">
-                                <TextBlock FontSize="11" Opacity="0.6" TextWrapping="Wrap"
-                                           Text="{Binding OcrText}" />
-                            </ScrollViewer>
-                        </StackPanel>
-                    </Border>
-
                     <Border x:Name="PreviewPanel" Padding="10" CornerRadius="8" BorderThickness="1"
                             BorderBrush="#40808080" Background="#20808080"
                             HorizontalAlignment="Center">
@@ -185,9 +172,22 @@
                 </StackPanel>
             </Border>
 
-            <!-- 三张引导卡只在还没图的时候露出来：有图了就不需要再讲怎么把图弄进来。 -->
+            <Border Padding="14" CornerRadius="8" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080"
+                    IsVisible="{Binding HasOcrSummary}">
+                <StackPanel Spacing="8">
+                    <TextBlock FontSize="13" FontWeight="SemiBold"
+                               Text="{Binding OcrSummary}" />
+                    <ScrollViewer MaxHeight="200">
+                        <TextBlock FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                   Text="{Binding OcrText}" />
+                    </ScrollViewer>
+                </StackPanel>
+            </Border>
+
+            <!-- 三张引导卡只在既没图、也没识别结果时露出来：已经有结果了就不用再讲怎么把图弄进来。 -->
             <Grid Margin="0,4,0,0" ColumnDefinitions="*,*,*" ColumnSpacing="14"
-                  IsVisible="{Binding !HasImage}">
+                  IsVisible="{Binding ShowIntakeGuides}">
                 <Border Padding="18" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="6">

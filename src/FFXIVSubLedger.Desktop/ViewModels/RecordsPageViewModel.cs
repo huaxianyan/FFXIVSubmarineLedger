@@ -66,6 +66,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(Preview))]
     [NotifyPropertyChangedFor(nameof(HasImage))]
+    [NotifyPropertyChangedFor(nameof(ShowIntakeGuides))]
     private Bitmap? _source;
 
     [ObservableProperty]
@@ -130,6 +131,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     public bool HasLootSummary => LootSummary.Length > 0;
 
     public bool HasLootRows => LootRows.Count > 0;
+
+    /// <summary>
+    /// 底部三张引导卡只在「既没有图、也没有识别结果」时露出来。
+    /// 直读聊天框拿到的结果同样不需要再看「怎么把图弄进来」。
+    /// </summary>
+    public bool ShowIntakeGuides => !HasImage && LootRows.Count == 0;
 
     public bool CanSave => LootRows.Any(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0);
 
@@ -570,6 +577,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             LootSummary += string.Create(CultureInfo.InvariantCulture, $"，还有 {unknown} 行没填单价");
 
         OnPropertyChanged(nameof(HasLootRows));
+        OnPropertyChanged(nameof(ShowIntakeGuides));
         OnPropertyChanged(nameof(CanSave));
         SaveCommand.NotifyCanExecuteChanged();
     }
@@ -589,16 +597,28 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             return;
         }
 
-        List<LootRowViewModel> included =
+        List<LootRowViewModel> selected =
         [
-            .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0),
+            .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0),
         ];
 
-        if (included.Count == 0)
+        if (selected.Count == 0)
         {
             StatusMessage = "没有可入账的行。";
             return;
         }
+
+        // 词表外的物名没填单价就不许写账：静默跳过等于把真收益算丢。
+        int unpriced = selected.Count(x => x.UnitPrice <= 0);
+        if (unpriced > 0)
+        {
+            StatusMessage = string.Create(
+                CultureInfo.InvariantCulture,
+                $"还有 {unpriced} 行没填单价（词表里没有的物名），填好再写账。");
+            return;
+        }
+
+        List<LootRowViewModel> included = selected;
 
         DateOnly date = DateOnly.FromDateTime(DateTime.Now);
 
