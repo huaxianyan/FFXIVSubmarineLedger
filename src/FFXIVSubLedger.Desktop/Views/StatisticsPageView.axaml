@@ -11,6 +11,7 @@
         <!-- 筛选固定在上方：滚到底也一直能改 -->
         <Border Grid.Row="0" Margin="28,20,28,0" Padding="16" CornerRadius="10" BorderThickness="1"
                 BorderBrush="#40808080" Background="#0A808080">
+            <StackPanel Spacing="8">
                 <StackPanel Orientation="Horizontal" Spacing="14">
                     <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="{loc:Tr stats.filter}" />
 
@@ -36,10 +37,12 @@
                             </DataTemplate>
                         </ComboBox.ItemTemplate>
                     </ComboBox>
-
-                    <TextBlock FontSize="11" Opacity="0.45" VerticalAlignment="Center"
-                               Text="{loc:Tr stats.subFilterHint}" />
                 </StackPanel>
+
+                <!-- 说明单独成行并换行：日文比中文长，挤在控件行里会溢出窗口 -->
+                <TextBlock FontSize="11" Opacity="0.45" TextWrapping="Wrap"
+                           Text="{loc:Tr stats.subFilterHint}" />
+            </StackPanel>
         </Border>
 
         <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled">
