@@ -76,7 +76,9 @@ powershell -File tools/publish.ps1
 
 **跑的时候解压出来跑，别直接双击 `artifacts/publish` 里的 exe**：那是打包用的中转目录，每次打包都会被整个删掉重建，在里面运行会遇上文件被替换的怪问题。解压后的目录（比如 `artifacts/run`）才是给人用的。
 
-启动有问题时看 `%LocalAppData%\FFXIVSubmarineLedger\logs\startup.log`，它记录了启动走到了哪一步。显卡驱动有问题导致界面不出来时，加 `--software-render` 参数用软件渲染再试。
+启动有问题时看 `%LocalAppData%\FFXIVSubmarineLedger\logs\startup.log`，它记录了启动走到了哪一步。
+
+**用 MacType 的话，记得把 `FFXIVSubmarineLedger.exe` 加进排除列表**。MacType 会挂钩 GDI/DirectWrite，而 Avalonia 的字体与渲染初始化走的正是这条路，被挂钩后会卡在平台初始化——表现就是双击之后进程在跑、界面不出来。应急可以加 `--software-render` 用软件渲染。
 
 **不用单文件发布**：Tesseract 的本地库加载器靠当前程序位置拼路径，单文件打包后那是空值，启动即崩。这一点已实测确认。
 

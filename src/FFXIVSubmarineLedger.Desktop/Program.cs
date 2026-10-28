@@ -54,7 +54,8 @@ internal static class Program
         {
             StartupDiagnostics.Record("开始构建 AppBuilder");
             AppBuilder builder = BuildAvaloniaApp();
-            StartupDiagnostics.Record("AppBuilder 已构建，进入 UI 循环");
+            StartupDiagnostics.Record($"AppBuilder 已构建（渲染={DescribeRendering()}）");
+
             builder.StartWithClassicDesktopLifetime(args);
             StartupDiagnostics.Record("UI 循环结束");
         }
@@ -129,7 +130,7 @@ internal static class Program
             {
                 // 默认先试硬件渲染，失败再退软件。显卡驱动初始化**挂住**（而不是报错）时
                 // Avalonia 不会自动降级，表现就是「进程在跑、界面不出来」，所以留一个开关。
-                RenderingMode = ForceSoftwareRendering()
+                RenderingMode = UseSoftwareRendering()
                     ? [Win32RenderingMode.Software]
                     : [Win32RenderingMode.AngleEgl, Win32RenderingMode.Software],
             })
@@ -137,14 +138,16 @@ internal static class Program
             .LogToTrace();
 
     /// <summary>
-    /// 是否强制软件渲染。显卡驱动有问题时用这个绕过：命令行加 <c>--software-render</c>，
-    /// 或设环境变量 <c>FFXIVSUB_SOFTWARE_RENDER=1</c>。
+    /// 是否强制软件渲染。默认走硬件渲染，只在显卡驱动或字体替换工具（MacType 之类）捣乱时用它绕过：
+    /// 命令行加 <c>--software-render</c>，或设环境变量 <c>FFXIVSUB_SOFTWARE_RENDER=1</c>。
     /// </summary>
-    private static bool ForceSoftwareRendering()
+    private static bool UseSoftwareRendering()
     {
         if (Environment.GetEnvironmentVariable("FFXIVSUB_SOFTWARE_RENDER") is "1" or "true")
             return true;
 
         return Environment.GetCommandLineArgs().Contains("--software-render", StringComparer.OrdinalIgnoreCase);
     }
+
+    private static string DescribeRendering() => UseSoftwareRendering() ? "software" : "hardware";
 }
