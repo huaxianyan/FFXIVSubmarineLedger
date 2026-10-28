@@ -1,3 +1,4 @@
+using FFXIVSubLedger.Domain.Settings;
 using System.Globalization;
 using CommunityToolkit.Mvvm.ComponentModel;
 using FFXIVSubLedger.Application.Localization;
@@ -36,6 +37,9 @@ public sealed partial class SubmarineChoice(string name) : ObservableObject
 /// <param name="Tag">语言标签，如 <c>zh-Hans</c>。</param>
 /// <param name="Label">该语言自己的写法，如 <c>日本語</c>。</param>
 public sealed record LanguageChoice(string Tag, string Label);
+
+/// <summary>代理模式下拉里的一项。</summary>
+public sealed record ProxyOption(ProxyMode Mode, string Label);
 
 /// <summary>筛选下拉里的一项。</summary>
 /// <param name="Id">对应的实体 ID；null 表示「全部」。</param>

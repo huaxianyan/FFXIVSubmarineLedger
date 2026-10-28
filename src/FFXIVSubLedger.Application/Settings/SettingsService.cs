@@ -32,6 +32,20 @@ public sealed class SettingsService(ISettingsStore store)
         await SaveAsync(settings, ct).ConfigureAwait(false);
     }
 
+    /// <summary>更新检查与代理的设置一起存。</summary>
+    public async Task SetUpdateOptionsAsync(
+        bool checkForUpdates,
+        ProxyMode proxyMode,
+        string proxyUrl,
+        CancellationToken ct = default)
+    {
+        AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
+        settings.CheckForUpdates = checkForUpdates;
+        settings.ProxyMode = proxyMode;
+        settings.ProxyUrl = proxyUrl ?? string.Empty;
+        await SaveAsync(settings, ct).ConfigureAwait(false);
+    }
+
     public async Task SetLastSelectedCharacterAsync(Guid? characterId, CancellationToken ct = default)
     {
         AppSettings settings = await GetAsync(ct).ConfigureAwait(false);

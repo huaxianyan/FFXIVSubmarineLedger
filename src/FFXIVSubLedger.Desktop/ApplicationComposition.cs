@@ -1,3 +1,5 @@
+using FFXIVSubLedger.Application.Updates;
+using System.Reflection;
 using FFXIVSubLedger.Application.Abstractions;
 using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Backup;
@@ -13,6 +15,9 @@ namespace FFXIVSubLedger.Desktop;
 /// <summary>组合根：手工装配依赖，不引入 DI 容器。</summary>
 public sealed class ApplicationComposition
 {
+    /// <summary>更新检查的仓库（GitHub API 路径用）。</summary>
+    private const string RepositorySlug = "huaxianyan/FFXIVSubmarineLedger";
+
     private ApplicationComposition(SqliteDatabase database, string dataDirectory)
     {
         Database = database;
@@ -26,6 +31,14 @@ public sealed class ApplicationComposition
         Records = new SqliteLootRecordRepository(database);
         Submarines = new SqliteSubmarineRepository(database);
         Backup = new BackupService(new SqliteBackupStore(database));
+
+        Version currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 1, 0);
+        Updates = new UpdateService(
+            new UpdateChecker(
+                RepositorySlug,
+                (mode, url) => new HttpClient(ProxySelector.CreateHandler(mode, url))),
+            Settings,
+            currentVersion);
 
         // 界面语言在开窗之前就要定下来，否则首屏会闪一下默认语言。
         AppSettings settings = Settings.GetAsync().GetAwaiter().GetResult();
@@ -48,6 +61,9 @@ public sealed class ApplicationComposition
     public ILootRecordRepository Records { get; }
 
     public ISubmarineRepository Submarines { get; }
+
+    /// <summary>当前的程序版本号，界面与用户代理里都用它。</summary>
+    public UpdateService Updates { get; }
 
     public BackupService Backup { get; }
 

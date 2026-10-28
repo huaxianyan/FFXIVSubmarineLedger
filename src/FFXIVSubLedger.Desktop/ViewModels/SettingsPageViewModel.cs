@@ -1,3 +1,4 @@
+using FFXIVSubLedger.Application.Updates;
 using System.Globalization;
 using Avalonia.Controls;
 using Avalonia.Platform.Storage;
@@ -21,10 +22,122 @@ public sealed partial class SettingsPageViewModel(
     Func<TopLevel?> topLevelProvider,
     BackupService backup,
     SettingsService settings,
+    UpdateService updates,
     string dataDirectory,
     string databasePath,
     Lazy<ItemCatalog> catalog) : ObservableObject
 {
+    /// <summary>代理三种模式的选项。文字随语言变，换语言时重建。</summary>
+    public IReadOnlyList<ProxyOption> ProxyOptions { get; private set; } = BuildProxyOptions();
+
+    public string CurrentVersionLabel => Loc.Format("settings.currentVersion", AppVersion.Describe(updates.Current));
+
+    /// <summary>启动时是否自动检查更新。</summary>
+    [ObservableProperty]
+    private bool _checkForUpdates = true;
+
+    [ObservableProperty]
+    private ProxyOption? _selectedProxy;
+
+    [ObservableProperty]
+    private string _proxyUrl = string.Empty;
+
+    /// <summary>上次检查的结果，直接就是给人看的句子。</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasUpdateStatus))]
+    private string _updateStatusLabel = string.Empty;
+
+    public bool HasUpdateStatus => UpdateStatusLabel.Length > 0;
+
+    /// <summary>有可打开的发布页时才显示「打开发布页」。</summary>
+    [ObservableProperty]
+    private bool _hasRelease;
+
+    private ReleaseInfo? _release;
+
+    /// <summary>只有自定义模式才需要填地址。</summary>
+    public bool CanEditProxyUrl => SelectedProxy?.Mode == ProxyMode.Custom;
+
+    /// <summary>装载设置时不要回写，否则一进页面就写一遍库。</summary>
+    private bool _loadingUpdateOptions;
+
+    partial void OnCheckForUpdatesChanged(bool value)
+    {
+        if (!_loadingUpdateOptions)
+            SaveUpdateOptions();
+    }
+
+    partial void OnProxyUrlChanged(string value) => OnPropertyChanged(nameof(CanEditProxyUrl));
+
+    partial void OnSelectedProxyChanged(ProxyOption? value)
+    {
+        OnPropertyChanged(nameof(CanEditProxyUrl));
+
+        if (!_loadingUpdateOptions)
+            SaveUpdateOptions();
+    }
+
+    /// <summary>页面显示时把设置读进来。</summary>
+    public void EnsureUpdateOptionsLoaded()
+    {
+        if (SelectedProxy is not null)
+            return;
+
+        ProxyOptions = BuildProxyOptions();
+        OnPropertyChanged(nameof(ProxyOptions));
+
+        // 设置已经缓存过，这里是本地 SQLite 读，可以同步等。
+        AppSettings current = settings.GetAsync().GetAwaiter().GetResult();
+
+        _loadingUpdateOptions = true;
+        try
+        {
+            CheckForUpdates = current.CheckForUpdates;
+            ProxyUrl = current.ProxyUrl;
+            SelectedProxy = ProxyOptions.FirstOrDefault(x => x.Mode == current.ProxyMode) ?? ProxyOptions[0];
+        }
+        finally
+        {
+            _loadingUpdateOptions = false;
+        }
+
+        OnPropertyChanged(nameof(CanEditProxyUrl));
+
+        if (updates.Last is { } last)
+            ShowResult(last);
+    }
+
+    /// <summary>保存更新与代理设置。地址框在失焦时调用，避免每敲一个字就写库。</summary>
+    public void SaveUpdateOptions()
+    {
+        if (SelectedProxy is null)
+            return;
+
+        if (SelectedProxy.Mode == ProxyMode.Custom && !ProxySelector.TryParse(ProxyUrl, out _))
+        {
+            StatusMessage = Loc.Get("settings.proxyInvalid");
+            return;
+        }
+
+        _ = settings.SetUpdateOptionsAsync(CheckForUpdates, SelectedProxy.Mode, ProxyUrl);
+    }
+
+    [RelayCommand]
+    private async Task CheckNowAsync()
+    {
+        UpdateStatusLabel = Loc.Get("settings.checking");
+
+        UpdateCheckResult result = await updates.CheckAsync().ConfigureAwait(true);
+        ShowResult(result);
+    }
+
+    [RelayCommand]
+    private void OpenRelease()
+    {
+        if (_release is { } release)
+            WindowsShell.OpenUrl(release.HtmlUrl);
+    }
+
     /// <summary>
     /// 可选的显示语言，直接来自随程序分发的语言资源：加一门语言只需加一个资源，
     /// 这里不用动。语言只影响界面与道具名，不影响收集。
@@ -75,7 +188,43 @@ public sealed partial class SettingsPageViewModel(
     {
         EnsureLanguageSelected();
         LoadCatalogLabel();
+
+        ProxyOptions = BuildProxyOptions();
+        OnPropertyChanged(nameof(ProxyOptions));
+        OnPropertyChanged(nameof(CurrentVersionLabel));
+
+        if (updates.Last is { } last)
+            ShowResult(last);
+        else if (UpdateStatusLabel.Length > 0)
+            UpdateStatusLabel = string.Empty;
     }
+
+    private void ShowResult(UpdateCheckResult result)
+    {
+        _release = result.Release;
+        HasRelease = result.Status == UpdateStatus.Available && result.Release is not null;
+
+        UpdateStatusLabel = result.Status switch
+        {
+            UpdateStatus.Available => Loc.Format("settings.updateAvailable", result.Release!.Version, AppVersion.Describe(result.Current)),
+            UpdateStatus.UpToDate => Loc.Format("settings.upToDate", AppVersion.Describe(result.Current)),
+            _ => DescribeFailure(result),
+        };
+    }
+
+    private static string DescribeFailure(UpdateCheckResult result) => result.Failure switch
+    {
+        UpdateFailure.HttpStatus => Loc.Format("settings.updateFailedHttp", result.HttpStatus ?? 0),
+        UpdateFailure.BadResponse => Loc.Get("settings.updateFailedBadResponse"),
+        _ => Loc.Format("settings.updateFailedNetwork", result.Detail ?? string.Empty),
+    };
+
+    private static IReadOnlyList<ProxyOption> BuildProxyOptions() =>
+    [
+        new(ProxyMode.System, Loc.Get("settings.proxySystem")),
+        new(ProxyMode.Direct, Loc.Get("settings.proxyDirect")),
+        new(ProxyMode.Custom, Loc.Get("settings.proxyCustom")),
+    ];
 
     private void LoadCatalogLabel()
     {

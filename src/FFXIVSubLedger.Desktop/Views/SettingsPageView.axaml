@@ -56,6 +56,51 @@
 
             <Border Padding="18" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#07808080">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr settings.updateTitle}" />
+                    <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                               Text="{loc:Tr settings.updateHint}" />
+                    <TextBlock FontSize="12" Opacity="0.75" Text="{Binding CurrentVersionLabel}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="{loc:Tr settings.checkNow}" Command="{Binding CheckNowCommand}" />
+                        <Button Content="{loc:Tr settings.openRelease}" Command="{Binding OpenReleaseCommand}"
+                                IsVisible="{Binding HasRelease}" />
+                        <CheckBox Content="{loc:Tr settings.autoCheck}" IsChecked="{Binding CheckForUpdates}"
+                                  VerticalAlignment="Center" />
+                    </StackPanel>
+                    <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                               IsVisible="{Binding HasUpdateStatus}"
+                               Text="{Binding UpdateStatusLabel}" />
+                </StackPanel>
+            </Border>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr settings.proxyTitle}" />
+                    <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                               Text="{loc:Tr settings.proxyHint}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <ComboBox FontSize="12" MinWidth="170"
+                                  ItemsSource="{Binding ProxyOptions}"
+                                  SelectedItem="{Binding SelectedProxy}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ProxyOption">
+                                    <TextBlock FontSize="12" Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                        <TextBox FontSize="12" MinWidth="260"
+                                 IsEnabled="{Binding CanEditProxyUrl}"
+                                 Text="{Binding ProxyUrl}"
+                                 Watermark="{loc:Tr settings.proxyUrlPlaceholder}"
+                                 LostFocus="OnProxyUrlLostFocus" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080">
                 <StackPanel Spacing="8">
                     <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr settings.recognitionTitle}" />
                     <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"

@@ -1,3 +1,5 @@
+using FFXIVSubLedger.Domain.Settings;
+using FFXIVSubLedger.Application.Updates;
 using Avalonia.Controls;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
@@ -8,8 +10,12 @@ namespace FFXIVSubLedger.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
+    private readonly ApplicationComposition _composition;
+
     public MainWindowViewModel(ApplicationComposition composition, Func<TopLevel?> topLevelProvider)
     {
+        _composition = composition;
+
         Characters = new CharacterManagerViewModel(composition.Characters);
         Records = new RecordsPageViewModel(
             topLevelProvider,
@@ -27,11 +33,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
             topLevelProvider,
             composition.Backup,
             composition.Settings,
+            composition.Updates,
             composition.DataDirectory,
             composition.Database.DatabasePath,
             composition.CatalogSource);
 
         // 换语言后页头、页标签与统计里的文案要跟着变。
+        _ = CheckForUpdatesOnStartupAsync();
+
         Loc.Instance.LanguageChanged += (_, _) =>
         {
             OnPropertyChanged(nameof(PageTitle));
@@ -56,6 +65,26 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public StatisticsPageViewModel Statistics { get; }
 
     public SettingsPageViewModel Settings { get; }
+
+    /// <summary>启动后自动查一次更新；查不到就安静地算了，不打扰记账。</summary>
+    private async Task CheckForUpdatesOnStartupAsync()
+    {
+        try
+        {
+            AppSettings options = await _composition.Settings.GetAsync().ConfigureAwait(true);
+            if (!options.CheckForUpdates)
+                return;
+
+            UpdateCheckResult result = await _composition.Updates.CheckAsync().ConfigureAwait(true);
+
+            if (result is { Status: UpdateStatus.Available, Release: { } release })
+                StatusMessage = Loc.Format("status.updateAvailable", release.Version);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            // 更新检查失败不该占据状态栏：用户没要求这件事。
+        }
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRecordsPage))]

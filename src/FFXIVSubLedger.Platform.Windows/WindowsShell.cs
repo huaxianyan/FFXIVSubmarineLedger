@@ -15,4 +15,12 @@ public static class WindowsShell
 
         Process.Start(new ProcessStartInfo("explorer.exe", $"\"{path}\"") { UseShellExecute = true });
     }
+
+    /// <summary>用默认浏览器打开网址（发布页之类）。</summary>
+    public static void OpenUrl(string url)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(url);
+
+        Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+    }
 }

@@ -15,6 +15,15 @@ public sealed class AppSettings
     /// </summary>
     public string UiLanguage { get; set; } = ItemDisplayLanguage.Fallback;
 
+    /// <summary>启动时检查有没有新版本。关掉之后只能手动点检查。</summary>
+    public bool CheckForUpdates { get; set; } = true;
+
+    /// <summary>更新检查的出网方式。</summary>
+    public ProxyMode ProxyMode { get; set; } = ProxyMode.System;
+
+    /// <summary><see cref="ProxyMode.Custom" /> 时用的代理地址，如 <c>http://127.0.0.1:7890</c>。</summary>
+    public string ProxyUrl { get; set; } = string.Empty;
+
     /// <summary>格子边长小于该像素值时，数量交给用户手输，不做自动识别。</summary>
     public int MinCellSizeForQuantityOcr { get; set; } = 40;
 }
