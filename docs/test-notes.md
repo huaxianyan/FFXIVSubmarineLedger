@@ -4,7 +4,7 @@
 
 ## 一次性准备
 
-1. 打开程序，先去设置页 **导出一次备份**——测试记账会写进正式库（`%LocalAppData%\FFXIVSubLedger\subledger.db`）。
+1. 打开程序，先去设置页 **导出一次备份**——测试记账会写进正式库（`%LocalAppData%\FFXIVSubmarineLedger\subledger.db`）。
 2. 确认游戏在运行并且角色已登录。
 
 ## 直读聊天框
@@ -42,7 +42,7 @@
 要更细的诊断（只导出相关行，不含其它聊天内容）：
 
 ```powershell
-.\FFXIVSubLedger.exe --dump-chat-diag diag.txt
+.\FFXIVSubmarineLedger.exe --dump-chat-diag diag.txt
 ```
 
 ## 已知边界

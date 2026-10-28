@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Domain\FFXIVSubmarineLedger.Domain.csproj" />
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Application\FFXIVSubmarineLedger.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Sharlayan" Version="9.2.5" />
+  </ItemGroup>
+</Project>

@@ -38,7 +38,7 @@ Write-Host "版本 $Version"
 
 if (Test-Path $output) { Remove-Item $output -Recurse -Force }
 
-dotnet publish (Join-Path $root 'src/FFXIVSubLedger.Desktop/FFXIVSubLedger.Desktop.csproj') `
+dotnet publish (Join-Path $root 'src/FFXIVSubmarineLedger.Desktop/FFXIVSubmarineLedger.Desktop.csproj') `
     -c Release `
     -r win-x64 `
     --self-contained true `
@@ -49,7 +49,7 @@ dotnet publish (Join-Path $root 'src/FFXIVSubLedger.Desktop/FFXIVSubLedger.Deskt
 # 调试符号不进分发包。
 Get-ChildItem $output -Filter *.pdb -File | Remove-Item -Force
 
-$name = "FFXIVSubLedger-$Version.zip"
+$name = "FFXIVSubmarineLedger-$Version.zip"
 $zip = Join-Path $dist $name
 if (Test-Path $zip) { Remove-Item $zip -Force }
 

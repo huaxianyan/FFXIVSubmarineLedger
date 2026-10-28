@@ -1,0 +1,28 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>FFXIVSubmarineLedger</AssemblyName>
+    <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+  </PropertyGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="Assets\**" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- OCR 模型要作为真实文件落在输出目录，Tesseract 自己按路径读，不能嵌进资源里。 -->
+    <None Include="Data\tessdata\*.traineddata" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.1" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="12.1.1" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.4.2" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Domain\FFXIVSubmarineLedger.Domain.csproj" />
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Application\FFXIVSubmarineLedger.Application.csproj" />
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Infrastructure\FFXIVSubmarineLedger.Infrastructure.csproj" />
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Platform.Windows\FFXIVSubmarineLedger.Platform.Windows.csproj" />
+  </ItemGroup>
+</Project>

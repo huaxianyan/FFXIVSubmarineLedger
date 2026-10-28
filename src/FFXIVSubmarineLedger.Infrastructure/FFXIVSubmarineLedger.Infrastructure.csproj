@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.0" />
+    <PackageReference Include="Tesseract" Version="5.2.0" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Domain\FFXIVSubmarineLedger.Domain.csproj" />
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Application\FFXIVSubmarineLedger.Application.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- 掉落表随程序分发，用户可查看、可手工补。 -->
+    <None Include="Data\items.json" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

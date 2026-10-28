@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\FFXIVSubmarineLedger.Domain\FFXIVSubmarineLedger.Domain.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!--
+      语言文件的文件名**不能带点号分段的语言名**（如 strings.ja.json）：SDK 会把它当附属程序集的
+      文化，只生成卫星程序集而不嵌进主程序。文件名只作人读用的标识，语言标签由文件内容的
+      language.tag 决定。
+    -->
+    <EmbeddedResource Include="Localization\language-*.json" />
+  </ItemGroup>
+</Project>

@@ -1,6 +1,6 @@
-# FFXIVSubLedger
+# FFXIVSubmarineLedger
 
-FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里的入手行识别出物名与数量，按游戏内固定的卖店价算出本次收益，归档到角色/部队，并提供日均、月均、年均等统计。
+FF14 潜艇收益统计工具。收艇后从游戏聊天框里直接读出（也可截日志窗口走 OCR），拿到入手行的物名与数量，按游戏内固定的卖店价算出本次收益，按角色与潜艇归档，并给出日均、月均、年均等统计。
 
 当前正式支持 **Windows 10/11 x64**。
 
@@ -8,41 +8,25 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 
 ## 当前状态
 
-**M1 骨架已完成**：解决方案分层、SQLite 持久化、多角色管理界面，界面框架对齐 FFXIVConfigManager。
+功能已闭环，可以日常用：收艇 → 识别 → 核对 → 入账 → 统计。
 
-**M2 截图入口已完成**：拖入、`Ctrl+V`、读剪贴板、选图片文件四种方式都能把截图收进来并预览，显示尺寸、来源与收益归属角色。
+**记账**。「收艇记账」页有四种取图方式（拖入、`Ctrl + V`、读剪贴板、选文件），也可以**直接从游戏聊天框读文本**——点「直接读聊天框」读一次，或开「自动监听」每 3 秒轮询、收完艇自动出账。这条路不经过截图与 OCR，不会认错字，也不会漏掉 HQ 标记。
 
-**识别路线已改（2026-10-27）**：从「截背包区域认图标」改为「截日志窗口认文字」，日语优先。改动的理由与新方案见 [docs/PLAN.md](docs/PLAN.md)，旧的网格检测与图标匹配整层退役，实测记录留在 PLAN 附录 A。
+**识别**。截图走「日志文本行 → 日文 OCR → 行模板 → 词表纠错」，认的是聊天记录里的入手行，**不是图标**（早期那套网格切分认图标的路线已整体退役，代码已删）。识别结果逐行列出，可改数量、切 HQ、在歧义时选候选、给词表外物名手填单价，合计实时刷新。
 
-**M3 日语日志闭环进行中**。日志行格式已用真实样本核实（756 × 798、26 行）：入手行是 `[11:40] 角色名は ▶ 物名×5を入手した。`，HQ 物品在物名后多一个 `◉`，数量与物名同行、无空格分隔。
+**按艇记账**。层级是 角色 → 艇 → 记录。「潜水艦「X」の探索完了」是归属凭据，一次读取里有几艘艇就写几笔记录；识别把相邻两艘艇串了时，每行的艇归属可以手改。
 
-**文本行定位已完成**：`Infrastructure/Recognition/TextLineLocator.cs`，行投影成带 → 按行高中位数滤掉边缘亮边 → 叠框预览。真实样本上切出 26 行，左边界全为 13 px，行高 24–25 px，与独立量测脚本完全一致。
+**统计**。「收益统计」页有总收益 / 日均 / 月均 / 年均四张卡、日/月可切的收益走势图、角色与艇与道具三种占比、已入账记录列表（可逐条删除）、导出 CSV。
 
-**日文 OCR 已接入**：Tesseract 5 + 随包分发的 `tessdata_fast` 日文模型（不依赖系统语言包）。真实样本 26 行全部读出。
+**设置**。显示数据目录与数据库位置、一键打开目录、JSON 备份导出与导入（导入整体替换，替换前自动备份）、显示语言（简体中文 / 日本語）、更新检查与网络代理。
 
-**识别链已闭环**：行模板解析 + 词表纠错 + 按卖店价计价 + 逐行确认后写入账。真实样本认出 14 条入手行，物名与数量 14/14 正确，合计 779,378 吉尔（真值 779,434，差的 56 全部来自两条被 OCR 吞掉 HQ 标记的 `エメラルド`）。
-
-**确认界面已完成**：每行可取消勾选、改数量、切 HQ（不可 HQ 的物名置灰）、在歧义时选候选、给词表外物名手填单价；合计实时刷新；「记入账」按「道具 + 品质」合并后写入 SQLite，写到默认角色名下。
-
-**按艇记账已成体系**：层级是 角色 → 艇 → 记录。聊天框里的「潜水艦「X」の探索完了」是归属凭据，一次读取里有几艘艇就写几笔记录。统计页可以先选角色、再选艇（艇名只在角色范围内唯一，不选角色时艇筛选是禁用的），并给出按艇的收益占比。老记录没有艇归属，会单列为「未标明艇」。
-
-**统计页已完成**：总收益 / 日均 / 月均 / 年均四张指标卡、收益走势图（日/月可切，自绘折线）、道具占比、角色占比、已入账记录列表（可逐条删除）、导出 CSV（一行一条明细，带 BOM 以避 Excel 乱码）。日均按自然日跨度算，不剔除没记录的日子。
-
-**可以直接读聊天框了**：点「直接读聊天框」读一次，或者开「自动监听」每 3 秒轮询、收完艇自动出账。这条路从游戏客户端里拿文本，不走截图与 OCR，因此不会出现认错字或漏掉 HQ 标记的问题。权限要求与游戏同级：游戏普通权限运行时本程序也不用提权（实测如此），只有游戏自己以管理员运行时才需要跟着提权。读不到时截图识别仍可用。
-
-游戏的聊天缓冲是 1000 条的环形表，所以**先收完艇、再开程序也能补读**——只要这中间没有刷出 1000 条新聊天把那几行挤掉。
-
-**设置页已完成**：显示数据目录与数据库位置、一键打开目录、JSON 备份导出与导入（导入整体替换，替换前自动备份当前数据）、显示掉落表条数与路径。
-
-下一步是发布（单文件打包、GitHub Release、自动更新）与维度对比。
-
-初版之后还要做「直接读取游戏内文本、彻底不截图」，需求与边界问题记录在 PLAN 第 12 节，本版不实现。
+**显示语言与收集语言分开**：界面与道具名跟着设置里的语言走，日志用哪种语言写都能照常识别。加一门语言只要放一个 `language-<名>.json`，不用改代码。
 
 ## 设计要点
 
 - **离线**：潜艇产出全部卖店，价格由游戏内固定值决定，因此不查市场价、不联网取价、无价格缓存。HQ 物品卖店价固定高于 NQ（向上取整），价格表里只需存一份 NQ 价。
 - **识别文字，再查词表**：日志把入手了什么、几个都写清楚了，而潜艇掉落物名是封闭的小集合。因此识别只需在词表里找出最像的那一条，OCR 不必完美，靠词表纠错与人工确认兜底。
-- **语言分开做**：日志行模板与物名都随客户端语言变，每语言一个解析器加一份词表，日语先行。
+- **显示语言与收集语言分开**：物名按 `ItemId` 绑定多语言写法，界面按设置显示；识别则用日志本身的语言（行模板决定），两者互不牵制。
 - **不假设截图对齐**：不要求固定窗口尺寸或固定截取范围，行位置从图像内容里算。
 - **日志窗口没有底板**：文字直接压在游戏画面上，二值化必须按行带自适应——实测背景亮度能从 8 跳到 180。
 - **不触碰游戏**：不注入进程、不写游戏内存、不自动操作游戏、不解析游戏 DAT 文件。可选地从聊天框直接读文本（进程外只读），能避开 OCR 误识；权限要求与游戏同级，游戏不提权就不需要提权。
@@ -60,11 +44,11 @@ FF14 潜艇收益统计工具。收艇后截取游戏日志窗口，从日志里
 ## 目录结构
 
 ```text
-src/FFXIVSubLedger.Domain            角色、部队、收益记录、道具、卖店价等领域模型
-src/FFXIVSubLedger.Application       用例与仓储接口
-src/FFXIVSubLedger.Infrastructure    SQLite 持久化、文本行解析（`Parsing`）、掉落表（`Catalog` + `Data/items.json`，多语言物名按 ItemId 绑定）
-src/FFXIVSubLedger.Platform.Windows  Windows 数据目录
-src/FFXIVSubLedger.Desktop           Avalonia UI、MVVM、随包分发的 OCR 模型（`Data/tessdata`）
+src/FFXIVSubmarineLedger.Domain            角色、部队、收益记录、道具、卖店价等领域模型
+src/FFXIVSubmarineLedger.Application       用例与仓储接口
+src/FFXIVSubmarineLedger.Infrastructure    SQLite 持久化、文本行解析（`Parsing`）、掉落表（`Catalog` + `Data/items.json`，多语言物名按 ItemId 绑定）
+src/FFXIVSubmarineLedger.Platform.Windows  Windows 数据目录
+src/FFXIVSubmarineLedger.Desktop           Avalonia UI、MVVM、随包分发的 OCR 模型（`Data/tessdata`）
 tests/                               自动化测试
 tools/                               日志截图版式量测、窗口截图与剪贴板脚本（Python）
 docs/PLAN.md                         技术方案
@@ -77,9 +61,9 @@ docs/PLAN.md                         技术方案
 需要 .NET 10 SDK。
 
 ```powershell
-dotnet build FFXIVSubLedger.sln
-dotnet test FFXIVSubLedger.sln
-dotnet run --project src/FFXIVSubLedger.Desktop
+dotnet build FFXIVSubmarineLedger.sln
+dotnet test FFXIVSubmarineLedger.sln
+dotnet run --project src/FFXIVSubmarineLedger.Desktop
 ```
 
 打一个可分发的包：
@@ -88,7 +72,7 @@ dotnet run --project src/FFXIVSubLedger.Desktop
 powershell -File tools/publish.ps1
 ```
 
-产物是 `artifacts/FFXIVSubLedger-<版本>.zip` 与同名 `.sha256`。自包含发布，目标机器不需要装 .NET。
+产物是 `artifacts/FFXIVSubmarineLedger-<版本>.zip` 与同名 `.sha256`。自包含发布，目标机器不需要装 .NET。
 
 **不用单文件发布**：Tesseract 的本地库加载器靠当前程序位置拼路径，单文件打包后那是空值，启动即崩。这一点已实测确认。
 
@@ -119,12 +103,12 @@ powershell -File tools/publish.ps1
 开发期可以用启动参数直接把一张图灌进来，省得反复手动拖：
 
 ```bash
-FFXIVSubLedger.exe --image "D:\shots\bag.png"
+FFXIVSubmarineLedger.exe --image "D:\shots\log.png"
 ```
 
 ## 识别路线
 
-`Infrastructure/Recognition/` 放纯算法部分，不依赖 UI，可以单独测。目标流程是「日志截图 → 文本行 → 日文识别 → 行模板 → 词表纠错」，目前只完成第一步：
+`Infrastructure/Recognition/` 放纯算法部分，不依赖 UI，可以单独测。流程是「日志截图 → 文本行 → 日文 OCR → 行模板 → 词表纠错」：
 
 | 模块 | 职责 | 状态 |
 | --- | --- | --- |
@@ -132,7 +116,8 @@ FFXIVSubLedger.exe --image "D:\shots\bag.png"
 | 日文 OCR | `LinePreprocessor`（裁行、放大 3×、Otsu 二值化、反相）+ `TesseractLineReader`；模型随包放在 `Data/tessdata/` | 已完成 |
 | 行模板解析 | `JapaneseLogLineParser`：从 `[HH:MM] 角色名は ▶ 物名×Nを入手した。` 取物名与数量，容忍 OCR 把符号读歪 | 已完成 |
 | 词表纠错 | `ItemMatcher`：封闭词表内编辑距离，多候选显式标出并按价降序默认 | 已完成 |
-| 网格检测、图标提取与匹配 | v0.4 的旧路线，已退役，代码已删除 | 已删 |
+| 聊天框直读 | `Sharlayan` 进程外只读聊天缓冲区，跳过截图与 OCR（推荐路径） | 已完成 |
+| 网格检测、图标提取与匹配 | v0.4 的旧路线，认图标不认文字，已整体退役 | 已删 |
 
 日志行格式已用真实样本核实，具体形态、版式参数与遗留未知项见 [docs/PLAN.md](docs/PLAN.md) 第 2 节与 6.4。
 
@@ -145,19 +130,29 @@ python tools/measure_log_lines.py <日志截图.png>
 不开窗口直接看一张图切出了哪些行：
 
 ```bash
-FFXIVSubLedger.exe --dump-lines <图片> <输出.txt>
+FFXIVSubmarineLedger.exe --dump-lines <图片> <输出.txt>
 ```
 
 输出行带位置、行距、行高与左边距。纯标准库实现，不依赖 Pillow 与 numpy。
 
+另外三个开发命令，用来核对识别链的中间结果（都是写文本文件、不开窗口）：
+
+```bash
+FFXIVSubmarineLedger.exe --dump-ocr <图片> <输出.txt> [tessdata 目录]   # 逐行 OCR 文本 + 词表匹配结果
+FFXIVSubmarineLedger.exe --dump-chat <输出.txt>                        # 读一次聊天框并按艇归属列出入手行
+FFXIVSubmarineLedger.exe --dump-chat-diag <输出.txt>                   # 聊天码分布与每行的解析判定，排查用
+```
+
 ## 数据位置
 
 ```text
-%LocalAppData%\FFXIVSubLedger\subledger.db            数据库
-%LocalAppData%\FFXIVSubLedger\backups\                导入前的自动备份
+%LocalAppData%\FFXIVSubmarineLedger\subledger.db            数据库
+%LocalAppData%\FFXIVSubmarineLedger\backups\                导入前的自动备份
 ```
 
 设置页可以直接打开这个目录，也能把全部数据导出成一个可读的 JSON 文件。导入是整体替换，替换前会自动存一份当前数据。
+
+程序早先叫 `FFXIVSubLedger`，数据放在 `%LocalAppData%\FFXIVSubLedger\`。改名后第一次启动会把这个目录整体搬到新位置；如果两个目录都在，程序不会动它们，交给你自己确认。
 
 ## 开源许可证
 
@@ -166,7 +161,7 @@ FFXIVSubLedger.exe --dump-lines <图片> <输出.txt>
 第三方组件：
 
 - [Tesseract](https://github.com/tesseract-ocr/tesseract)（Apache-2.0），通过 NuGet 包 `Tesseract` 引入。
-- [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 的日文模型 `jpn.traineddata`（Apache-2.0），位于 `src/FFXIVSubLedger.Desktop/Data/tessdata/`。
+- [tessdata_fast](https://github.com/tesseract-ocr/tessdata_fast) 的日文模型 `jpn.traineddata`（Apache-2.0），位于 `src/FFXIVSubmarineLedger.Desktop/Data/tessdata/`。
 - [Sharlayan](https://github.com/FFXIVAPP/sharlayan)（MIT），用于进程外读取游戏聊天框文本；它内置 FFXIVClientStructs（MIT）与 Lumina（MIT）。
 
 OCR 引擎与模型都是随程序分发的，不依赖用户系统里装没装 OCR 组件或日文语言包。

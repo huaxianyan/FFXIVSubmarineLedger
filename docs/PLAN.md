@@ -1,7 +1,7 @@
 # FF14 潜艇收益统计工具 — 技术方案
 
 > 状态：v0.5。v0.4 及以前按「截图 → 网格检测 → 图标匹配」设计；2026-10-27 需求变更后改为「截图游戏日志 → 识别文本 → 物名匹配」，日语优先。
-> 代号：`FFXIVSubLedger`，工作目录 `E:/Dev/FFXIVSubmarineLedger`。
+> 项目名：`FFXIVSubmarineLedger`（仓库、程序集、可执行文件、数据目录同名），工作目录 `E:/Dev/FFXIVSubmarineLedger`。
 
 ## 0. 需求变更（v0.5）
 
@@ -97,7 +97,7 @@
 - xUnit
 - 模块化单体：`Domain` / `Application` / `Infrastructure` / `Platform.Windows` / `Desktop`
 - 界面文案暂用硬编码简体中文；`.resx` 本地化暂不引入
-- 发布：`tools/publish.ps1` 打自包含目录包 → 去掉 PDB → 压缩为 `artifacts/FFXIVSubLedger-<版本>.zip` → 生成同名 `.sha256`。只有 win-x64 一个包，所以文件名不带架构段。**不用单文件发布**：Tesseract 的本地库加载器（InteropDotNet）靠 `Assembly.Location` 拼路径，单文件打包后那是空值，构造引擎时直接抛空引用；实测已确认，不是猜测。自包含目录包比单文件大（约 54 MB），换来的是一钥直接能跑。
+- 发布：`tools/publish.ps1` 打自包含目录包 → 去掉 PDB → 压缩为 `artifacts/FFXIVSubmarineLedger-<版本>.zip` → 生成同名 `.sha256`。只有 win-x64 一个包，所以文件名不带架构段。**不用单文件发布**：Tesseract 的本地库加载器（InteropDotNet）靠 `Assembly.Location` 拼路径，单文件打包后那是空值，构造引擎时直接抛空引用；实测已确认，不是猜测。自包含目录包比单文件大（约 54 MB），换来的是一钥直接能跑。
 - 许可证：GPL-3.0-only
 
 **图像与文本识别**：
@@ -115,11 +115,11 @@ OCR 实现放在通用 `Infrastructure`（Tesseract 跨平台），`Domain`/`App
 ## 4. 分层与架构
 
 ```text
-FFXIVSubLedger.Domain          角色、部队、收益记录、道具、物名、卖店价等领域模型与规则
-FFXIVSubLedger.Application     识别编排、纠错、记账、统计等用例与接口
-FFXIVSubLedger.Infrastructure  SQLite、文本行定位、日志行解析、词表与纠错
-FFXIVSubLedger.Platform.Windows 剪贴板、全局热键、屏幕捕获、OCR
-FFXIVSubLedger.Desktop         Avalonia UI、MVVM、桌面交互
+FFXIVSubmarineLedger.Domain          角色、部队、收益记录、道具、物名、卖店价等领域模型与规则
+FFXIVSubmarineLedger.Application     识别编排、纠错、记账、统计等用例与接口
+FFXIVSubmarineLedger.Infrastructure  SQLite、文本行定位、日志行解析、词表与纠错
+FFXIVSubmarineLedger.Platform.Windows 剪贴板、全局热键、屏幕捕获、OCR
+FFXIVSubmarineLedger.Desktop         Avalonia UI、MVVM、桌面交互
 tests/                         Domain / Application / Integration 测试
 ```
 
@@ -273,7 +273,7 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 
 界面与道具名支持多语言，**收集不受影响**：日志用哪种语言写，都照常按行模板解析。
 
-- **语言资源**：`src/FFXIVSubLedger.Application/Localization/language-*.json`，作为嵌入式资源随程序分发。每个文件自带 `language.tag`（如 `zh-Hans`、`ja`）与 `language.name`（如 `简体中文`、`日本語`）。
+- **语言资源**：`src/FFXIVSubmarineLedger.Application/Localization/language-*.json`，作为嵌入式资源随程序分发。每个文件自带 `language.tag`（如 `zh-Hans`、`ja`）与 `language.name`（如 `简体中文`、`日本語`）。
 - **加一门语言不用改代码**：放一个 `language-<任意名>.json`，键与现有语言对齐即可。设置页的语言下拉直接由 `Loc.Available` 生成，键集合由测试 `LocalizationTests.EveryLanguageHasTheSameKeys` 守着。
 - **文件名不能带点号分段的语言名**（如 `strings.ja.json`）：MSBuild 会把它当成附属程序集的文化，只生成卫星程序集，主程序里读不到。这个坑吃过一次，见项目档案。
 - **缺键兜底**：当前语言 → 英语 → 默认语言（`zh-Hans`）→ 任意语言 → 键本身。
@@ -281,7 +281,7 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 - **金额单位统一写 `Gil`**（英文，前面留一个空格，如 `995,392 Gil`）。
 - 界面文案走 `{loc:Tr key}` 标记扩展。每个绑定拿到自己的 `LocalizedText`（普通属性 + 弱引用登记），换语言时逐个通知，即时生效、不用重启。
   **不能绑到 `Loc` 的索引器**：Avalonia 12 的绑定引擎不会因 `PropertyChanged("Item[]")`（甚至属性名为空的全量通知）重新求值索引器路径，界面会一直显示旧语言——这个坑用无头测试钉住了，见下。
-- 测试：`tests/FFXIVSubLedger.Desktop.Tests`（xunit v3 + Avalonia.Headless）验证两件事：XAML 文案绑定能在换语言后刷新；视图里用到的每个键在每门语言里都存在。
+- 测试：`tests/FFXIVSubmarineLedger.Desktop.Tests`（xunit v3 + Avalonia.Headless）验证两件事：XAML 文案绑定能在换语言后刷新；视图里用到的每个键在每门语言里都存在。
 
 ## 6.5 物名词表与纠错
 
@@ -381,6 +381,7 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 ### 6.8 多角色 / 多部队
 
 - 实体：`角色`（角色名 + 服务器）与 `部队`（FC）。潜艇归属部队，收益最终归到角色。
+- **现状**：`部队` 只在模型、备份与 CSV 列里，界面还没有管理入口；现在记账一律归到角色，`free_company` 为空。做界面时要连潜艇归属一起改。
 - 单角色：识别完成后直接归属，不打断。
 - 多角色：识别完成后弹选择框，默认选中上次选择；设置里可指定默认角色。
 - 角色可启用/停用，停用的不出现在选择框。
@@ -464,10 +465,10 @@ v0.4 的 `IconChoice`（同图标多道具的选择记忆）与图标字段随�
 
 ## 10. 开发期辅助
 
-- `FFXIVSubLedger.exe --image <图片路径>`：启动时直接把一张日志截图灌进收艇记账页，省去反复手动拖图。
-- `FFXIVSubLedger.exe --dump-lines <图片> <输出.txt>`：不开窗口，把切出的文本行几何写成文本，用于核对行定位。
-- `FFXIVSubLedger.exe --dump-ocr <图片> <输出.txt> [tessdata 目录]`：不开窗口，输出每行的 OCR 结果**和**认出的入手行与合计，一次命令核完整条识别链。不传模型目录就用随包的那份。
-- `FFXIVSubLedger.exe --dump-chat <输出.txt>`：不开窗口，从正在运行的游戏客户端读一遍聊天框，写出原始行与认出的入手行。权限要求与游戏同级，是核对聊天行格式的主要手段。
+- `FFXIVSubmarineLedger.exe --image <图片路径>`：启动时直接把一张日志截图灌进收艇记账页，省去反复手动拖图。
+- `FFXIVSubmarineLedger.exe --dump-lines <图片> <输出.txt>`：不开窗口，把切出的文本行几何写成文本，用于核对行定位。
+- `FFXIVSubmarineLedger.exe --dump-ocr <图片> <输出.txt> [tessdata 目录]`：不开窗口，输出每行的 OCR 结果**和**认出的入手行与合计，一次命令核完整条识别链。不传模型目录就用随包的那份。
+- `FFXIVSubmarineLedger.exe --dump-chat <输出.txt>`：不开窗口，从正在运行的游戏客户端读一遍聊天框，写出原始行与认出的入手行。权限要求与游戏同级，是核对聊天行格式的主要手段。
 - `tools/capture_window.py <输出文件> [标题关键字]`：`PrintWindow` 抓本程序窗口，窗口被挡住也能截，用于人工核对界面。
 - `tools/set_clipboard_image.py`：把指定图片塞进剪贴板，测粘贴路径。
 
