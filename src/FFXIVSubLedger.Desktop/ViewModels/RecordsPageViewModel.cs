@@ -112,6 +112,17 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     public string WatchButtonLabel => IsWatching ? Loc.Get("records.watchStop") : Loc.Get("records.watchStart");
 
+    /// <summary>换语言后刷新页内由代码拼出来的文字。</summary>
+    public void Relocalize()
+    {
+        OnPropertyChanged(nameof(WatchButtonLabel));
+
+        foreach (LootRowViewModel row in LootRows)
+            row.Relocalize();
+
+        RefreshLootTotals();
+    }
+
     /// <summary>认出的入手记录，逐行可改数量与品质，取消勾选就不入账。</summary>
     public ObservableCollection<LootRowViewModel> LootRows { get; } = [];
 
@@ -563,14 +574,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// </summary>
     private static IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(IReadOnlyList<RecognizedLoot> loot)
     {
-        List<SubmarineChoice> choices = [new(string.Empty, Loc.Get("records.subUnmarked"))];
+        List<SubmarineChoice> choices = [new(string.Empty)];
 
         choices.AddRange(loot
             .Select(x => x.SubmarineName)
             .Where(name => name is { Length: > 0 })
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
-            .Select(name => new SubmarineChoice(name!, name!)));
+            .Select(name => new SubmarineChoice(name!)));
 
         return choices;
     }

@@ -21,7 +21,7 @@ public sealed partial class LootRowViewModel : ObservableObject
     {
         SubmarineChoices = submarineChoices;
         _selectedSubmarine = loot.SubmarineName is { Length: > 0 } name
-            ? submarineChoices.FirstOrDefault(x => x.Name == name) ?? new SubmarineChoice(name, name)
+            ? submarineChoices.FirstOrDefault(x => x.Name == name) ?? new SubmarineChoice(name)
             : submarineChoices[0];
 
         LineNumber = loot.LineNumber;
@@ -60,6 +60,17 @@ public sealed partial class LootRowViewModel : ObservableObject
     public bool HasCandidateChoice => _candidates.Count > 1;
 
     public string SubmarineLabel => SubmarineName ?? Loc.Get("records.subUnmarked");
+
+    /// <summary>换语言后刷新这一行里由文案拼出来的部分。</summary>
+    public void Relocalize()
+    {
+        foreach (SubmarineChoice choice in SubmarineChoices)
+            choice.Relocalize();
+
+        OnPropertyChanged(nameof(SubmarineLabel));
+        OnPropertyChanged(nameof(ItemName));
+        OnPropertyChanged(nameof(PriceLabel));
+    }
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemName))]

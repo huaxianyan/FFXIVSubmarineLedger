@@ -88,6 +88,9 @@ public sealed partial class StatisticsPageViewModel(
 
     public string TrendTitle => IsMonthly ? Loc.Get("stats.trendMonth") : Loc.Get("stats.trendDay");
 
+    /// <summary>换语言后重算页内文字。筛选下拉与统计值在 <see cref="LoadAsync"/> 里重建。</summary>
+    public void Relocalize() => OnPropertyChanged(nameof(TrendTitle));
+
     public bool HasStatus => StatusMessage.Length > 0;
 
     public bool HasRecords => Records.Count > 0;

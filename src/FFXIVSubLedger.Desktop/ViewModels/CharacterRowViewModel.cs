@@ -25,6 +25,12 @@ public sealed partial class CharacterRowViewModel(Character model, CharacterMana
 
     public string ToggleLabel => model.IsActive ? Loc.Get("characters.disable") : Loc.Get("characters.enable");
 
+    public void Relocalize()
+    {
+        OnPropertyChanged(nameof(WorldLabel));
+        OnPropertyChanged(nameof(ToggleLabel));
+    }
+
     [RelayCommand]
     private Task SetDefault() => owner.SetDefaultAsync(this);
 

@@ -1,4 +1,5 @@
 using System.Globalization;
+using CommunityToolkit.Mvvm.ComponentModel;
 using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
 
@@ -16,10 +17,20 @@ public sealed class SubmarineShareRowViewModel(LootStatisticsSubmarine item, str
     public string ValueLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.TotalValue:N0} Gil");
 }
 
-/// <summary>确认界面里「这一行属于哪艘艇」的选项。</summary>
-/// <param name="Name">艇名；空串表示未标明。</param>
-/// <param name="Label">下拉里显示的文字。</param>
-public sealed record SubmarineChoice(string Name, string Label);
+/// <summary>
+/// 确认界面里「这一行属于哪艘艇」的选项。换语言时「未标明艇」那项要跟着变，
+/// 所以是可观察对象，同一份实例在多行之间共享。
+/// </summary>
+public sealed partial class SubmarineChoice(string name) : ObservableObject
+{
+    /// <summary>艇名；空串表示未标明。</summary>
+    public string Name { get; } = name;
+
+    /// <summary>下拉里显示的文字。艇名本身不翻译，只有「未标明」那一项跟着语言走。</summary>
+    public string Label => Name.Length > 0 ? Name : Loc.Get("records.subUnmarked");
+
+    public void Relocalize() => OnPropertyChanged(nameof(Label));
+}
 
 /// <summary>显示语言下拉里的一项。语言名用各自的语言书写，不随界面语言变。</summary>
 /// <param name="Tag">语言标签，如 <c>zh-Hans</c>。</param>

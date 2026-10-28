@@ -41,6 +41,15 @@ public sealed partial class CharacterManagerViewModel(CharacterService character
         CountLabel = Rows.Count == 0 ? string.Empty : Loc.Format("characters.countLabel", Rows.Count);
     }
 
+    /// <summary>换语言后刷新页内由代码拼出来的文字。</summary>
+    public void Relocalize()
+    {
+        CountLabel = Rows.Count == 0 ? string.Empty : Loc.Format("characters.countLabel", Rows.Count);
+
+        foreach (CharacterRowViewModel row in Rows)
+            row.Relocalize();
+    }
+
     [RelayCommand]
     private async Task AddAsync()
     {

@@ -70,6 +70,13 @@ public sealed partial class SettingsPageViewModel(
         LoadCatalogLabel();
     }
 
+    /// <summary>换语言后刷新页内由代码拼出来的文字。</summary>
+    public void Relocalize()
+    {
+        EnsureLanguageSelected();
+        LoadCatalogLabel();
+    }
+
     private void LoadCatalogLabel()
     {
         try

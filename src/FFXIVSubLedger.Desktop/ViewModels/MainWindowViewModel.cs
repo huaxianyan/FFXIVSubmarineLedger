@@ -36,7 +36,16 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             OnPropertyChanged(nameof(PageTitle));
             OnPropertyChanged(nameof(PageSubtitle));
+
+            Records.Relocalize();
+            Characters.Relocalize();
+            Settings.Relocalize();
+            Statistics.Relocalize();
             _ = Statistics.LoadAsync();
+
+            StatusMessage = Characters.Rows.Count == 0
+                ? Loc.Get("status.noCharacterHint")
+                : Loc.Format("status.loadedCharacters", Characters.Rows.Count);
         };
     }
 
