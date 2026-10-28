@@ -1,6 +1,7 @@
 using System.Collections.ObjectModel;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Characters;
 using FFXIVSubLedger.Application.Errors;
 using FFXIVSubLedger.Domain.Characters;
@@ -37,7 +38,7 @@ public sealed partial class CharacterManagerViewModel(CharacterService character
         Rows = new ObservableCollection<CharacterRowViewModel>(
             all.Select(x => new CharacterRowViewModel(x, this)));
         HasCharacters = Rows.Count > 0;
-        CountLabel = Rows.Count == 0 ? string.Empty : $"共 {Rows.Count} 个角色";
+        CountLabel = Rows.Count == 0 ? string.Empty : Loc.Format("characters.countLabel", Rows.Count);
     }
 
     [RelayCommand]
@@ -48,7 +49,7 @@ public sealed partial class CharacterManagerViewModel(CharacterService character
             await characters.AddAsync(NewName, NewWorld).ConfigureAwait(true);
             NewName = string.Empty;
             NewWorld = string.Empty;
-            StatusMessage = "已添加角色。";
+            StatusMessage = Loc.Get("characters.added");
             await LoadAsync().ConfigureAwait(true);
         }
         catch (ValidationException exception)
@@ -60,7 +61,7 @@ public sealed partial class CharacterManagerViewModel(CharacterService character
     public async Task SetDefaultAsync(CharacterRowViewModel row)
     {
         await characters.SetDefaultAsync(row.Id).ConfigureAwait(true);
-        StatusMessage = $"已将「{row.DisplayName}」设为默认角色。";
+        StatusMessage = Loc.Format("characters.defaultSet", row.DisplayName);
         await LoadAsync().ConfigureAwait(true);
     }
 
@@ -68,14 +69,14 @@ public sealed partial class CharacterManagerViewModel(CharacterService character
     {
         bool target = !row.IsActive;
         await characters.SetActiveAsync(row.Id, target).ConfigureAwait(true);
-        StatusMessage = target ? $"已启用「{row.DisplayName}」。" : $"已停用「{row.DisplayName}」。";
+        StatusMessage = target ? Loc.Format("characters.enabledTo", row.DisplayName) : Loc.Format("characters.disabledTo", row.DisplayName);
         await LoadAsync().ConfigureAwait(true);
     }
 
     public async Task DeleteAsync(CharacterRowViewModel row)
     {
         await characters.DeleteAsync(row.Id).ConfigureAwait(true);
-        StatusMessage = $"已删除「{row.DisplayName}」。";
+        StatusMessage = Loc.Format("characters.deleted", row.DisplayName);
         await LoadAsync().ConfigureAwait(true);
     }
 }

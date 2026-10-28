@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:FFXIVSubLedger.Desktop.Localization"
              xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
              xmlns:domain="clr-namespace:FFXIVSubLedger.Domain.Catalog;assembly=FFXIVSubLedger.Domain"
              x:Class="FFXIVSubLedger.Desktop.Views.RecordsPageView"
@@ -38,23 +39,23 @@
                           Stroke="#5B8DEF" StrokeThickness="1.6"
                           StrokeLineCap="Round" StrokeJoin="Round" Stretch="Uniform" />
                     <TextBlock FontSize="16" FontWeight="SemiBold" HorizontalAlignment="Center"
-                               IsVisible="{Binding !HasImage}" Text="把收艇截图拖到这里" />
+                               IsVisible="{Binding !HasImage}" Text="{loc:Tr records.dropTitle}" />
                     <TextBlock FontSize="14" FontWeight="SemiBold" HorizontalAlignment="Center"
-                               IsVisible="{Binding HasImage}" Text="再拖一张就替换掉当前这张" />
+                               IsVisible="{Binding HasImage}" Text="{loc:Tr records.dropTitleHasImage}" />
                     <TextBlock FontSize="12" Opacity="0.65" HorizontalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" MaxWidth="460"
                                IsVisible="{Binding !HasImage}"
-                               Text="截图里只要有收艇的聊天记录就行。也可以直接 Ctrl + V 粘贴，或者从游戏客户端里直接读聊天框。" />
+                               Text="{loc:Tr records.dropHint}" />
                     <StackPanel Margin="0,4,0,0" Orientation="Horizontal" Spacing="10"
                                 HorizontalAlignment="Center">
-                        <Button Classes="accent" Content="读取剪贴板"
+                        <Button Classes="accent" Content="{loc:Tr records.readClipboard}"
                                 Command="{Binding ReadClipboardCommand}" />
-                        <Button Content="选择图片文件" Command="{Binding PickFileCommand}" />
-                        <Button Content="直接读聊天框" Command="{Binding ReadChatLogCommand}"
-                                ToolTip.Tip="从游戏客户端里直接读聊天内容，不需要截图。权限与游戏同级即可，游戏没提权就不用提权。" />
+                        <Button Content="{loc:Tr records.pickFile}" Command="{Binding PickFileCommand}" />
+                        <Button Content="{loc:Tr records.readChat}" Command="{Binding ReadChatLogCommand}"
+                                ToolTip.Tip="{loc:Tr records.readChatTip}" />
                         <Button Classes="accent" Content="{Binding WatchButtonLabel}"
                                 Command="{Binding ToggleWatchCommand}"
-                                ToolTip.Tip="打开后每 3 秒读一次新聊天，收完艇自动出账。游戏聊天框是 1000 条的环形表，所以先收完再开程序也能补读。" />
+                                ToolTip.Tip="{loc:Tr records.watchTip}" />
                     </StackPanel>
                 </StackPanel>
             </Grid>
@@ -63,7 +64,7 @@
                     BorderBrush="#40808080" Background="#07808080">
                 <StackPanel Spacing="8">
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
-                        <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="收益记入" />
+                        <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="{loc:Tr records.target}" />
                         <TextBlock Grid.Column="1" FontSize="13" TextWrapping="Wrap"
                                    Text="{Binding TargetCharacterLabel}" />
                     </Grid>
@@ -79,7 +80,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <TextBlock FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center"
                                    TextWrapping="Wrap" Text="{Binding LootSummary}" />
-                        <Button Grid.Column="1" Content="记入账"
+                        <Button Grid.Column="1" Content="{loc:Tr records.save}"
                                 Command="{Binding SaveCommand}" />
                     </Grid>
 
@@ -102,7 +103,7 @@
                                                   SelectedItem="{Binding SelectedItem}">
                                             <ComboBox.ItemTemplate>
                                                 <DataTemplate x:DataType="domain:LootCatalogEntry">
-                                                    <TextBlock FontSize="11" Text="{Binding Name}" />
+                                                    <TextBlock FontSize="11" Text="{Binding DisplayName}" />
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
@@ -137,7 +138,7 @@
                     <Grid ColumnDefinitions="*,Auto">
                         <StackPanel Orientation="Horizontal" Spacing="10">
                             <TextBlock FontSize="18" FontWeight="SemiBold" VerticalAlignment="Center"
-                                       Text="本次截图" />
+                                       Text="{loc:Tr records.screenshotTitle}" />
                             <Border CornerRadius="4" Padding="7,2" Background="#285B8DEF"
                                     VerticalAlignment="Center">
                                 <TextBlock FontSize="11" Text="{Binding SourceLabel}" />
@@ -148,8 +149,8 @@
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
                                     VerticalAlignment="Center">
                             <CheckBox IsChecked="{Binding ShowLineOverlay}"
-                                      IsEnabled="{Binding HasLineSummary}" Content="显示行框" />
-                            <Button Content="清除" Command="{Binding ClearCommand}" />
+                                      IsEnabled="{Binding HasLineSummary}" Content="{loc:Tr records.showLines}" />
+                            <Button Content="{loc:Tr records.clear}" Command="{Binding ClearCommand}" />
                         </StackPanel>
                     </Grid>
 
@@ -193,24 +194,24 @@
                     <StackPanel Spacing="6">
                         <TextBlock FontSize="15" FontWeight="SemiBold" Text="Ctrl + V" />
                         <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                                   Text="截图工具复制之后，在本页任意位置按 Ctrl + V 即可。" />
+                                   Text="{loc:Tr records.guidePasteText}" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="1" Padding="18" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="6">
-                        <TextBlock FontSize="15" FontWeight="SemiBold" Text="拖进来" />
+                        <TextBlock FontSize="15" FontWeight="SemiBold" Text="{loc:Tr records.guideDropTitle}" />
                         <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
-                                   Text="把图片文件从资源管理器直接拖到上面的框里。" />
+                                   Text="{loc:Tr records.guideDropText}" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Padding="18" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="6">
                         <TextBlock FontSize="15" FontWeight="SemiBold" Opacity="0.6"
-                                   Text="全局热键（计划中）" />
+                                   Text="{loc:Tr records.guideHotkeyTitle}" />
                         <TextBlock FontSize="12" Opacity="0.5" TextWrapping="Wrap"
-                                   Text="收完艇按一下热键直接抓图，连截图工具都不用开。" />
+                                   Text="{loc:Tr records.guideHotkeyText}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -218,7 +219,7 @@
             <Border Padding="18" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#07808080">
                 <TextBlock FontSize="12" Opacity="0.62" TextWrapping="Wrap"
-                           Text="网格切分已完成，图标识别与计价是下一步（M3）。识别全程在本机进行，不联网、不上传截图；价格用游戏里定的卖店价，不需要查市场行情。" />
+                           Text="{loc:Tr records.footer}" />
             </Border>
 
         </StackPanel>

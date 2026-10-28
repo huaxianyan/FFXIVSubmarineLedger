@@ -24,6 +24,14 @@ public sealed class SettingsService(ISettingsStore store)
         await SaveAsync(settings, ct).ConfigureAwait(false);
     }
 
+    /// <summary>切换界面语言并落库。</summary>
+    public async Task SetUiLanguageAsync(string language, CancellationToken ct = default)
+    {
+        AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
+        settings.UiLanguage = language;
+        await SaveAsync(settings, ct).ConfigureAwait(false);
+    }
+
     public async Task SetLastSelectedCharacterAsync(Guid? characterId, CancellationToken ct = default)
     {
         AppSettings settings = await GetAsync(ct).ConfigureAwait(false);

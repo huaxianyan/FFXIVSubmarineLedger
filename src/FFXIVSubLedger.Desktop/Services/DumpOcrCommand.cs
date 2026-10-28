@@ -65,7 +65,7 @@ internal static class DumpOcrCommand
             string submarine = entry.SubmarineName is { Length: > 0 } sub ? $"[{sub}] " : "[未标明艇] ";
             string suffix = entry.IsKnown ? string.Empty : "  [未命中词表]";
             if (entry.IsAmbiguous)
-                suffix += $"  [候选 {entry.Candidates.Count}: {string.Join(" / ", entry.Candidates.Select(x => x.Name))}]";
+                suffix += $"  [候选 {entry.Candidates.Count}: {string.Join(" / ", entry.Candidates.Select(x => x.CanonicalName))}]";
 
             text.AppendLine(
                 CultureInfo.InvariantCulture,

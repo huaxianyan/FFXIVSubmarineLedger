@@ -1,4 +1,5 @@
 using System.Globalization;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
@@ -10,7 +11,7 @@ public sealed class CharacterShareRowViewModel(LootStatisticsCharacter item, str
 
     public double SharePercent { get; } = item.SharePercent;
 
-    public string RecordCountLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.RecordCount} 次");
+    public string RecordCountLabel { get; } = Loc.Format("stats.times", item.RecordCount);
 
-    public string ValueLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.TotalValue:N0} 吉尔");
+    public string ValueLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.TotalValue:N0} Gil");
 }

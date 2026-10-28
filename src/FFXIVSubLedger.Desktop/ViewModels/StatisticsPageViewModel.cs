@@ -6,9 +6,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFXIVSubLedger.Application.Abstractions;
 using FFXIVSubLedger.Application.Characters;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
+using FFXIVSubLedger.Domain.Catalog;
 using FFXIVSubLedger.Domain.Characters;
 using FFXIVSubLedger.Domain.Records;
+using FFXIVSubLedger.Infrastructure.Catalog;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
@@ -20,7 +23,8 @@ public sealed partial class StatisticsPageViewModel(
     ILootRecordRepository records,
     ISubmarineRepository submarines,
     CharacterService characters,
-    Func<TopLevel?> topLevelProvider) : ObservableObject
+    Func<TopLevel?> topLevelProvider,
+    Lazy<ItemCatalog> catalog) : ObservableObject
 {
     private IReadOnlyList<LootRecord> _all = [];
     private IReadOnlyDictionary<Guid, string> _names = new Dictionary<Guid, string>();
@@ -82,7 +86,7 @@ public sealed partial class StatisticsPageViewModel(
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     private string _statusMessage = string.Empty;
 
-    public string TrendTitle => IsMonthly ? "每月收益走势" : "每日收益走势";
+    public string TrendTitle => IsMonthly ? Loc.Get("stats.trendMonth") : Loc.Get("stats.trendDay");
 
     public bool HasStatus => StatusMessage.Length > 0;
 
@@ -112,7 +116,7 @@ public sealed partial class StatisticsPageViewModel(
         _submarineNames = allSubmarines.ToDictionary(x => x.Id, x => x.Name);
 
         CharacterOptions.Clear();
-        CharacterOptions.Add(new FilterOption(null, "全部角色"));
+        CharacterOptions.Add(new FilterOption(null, Loc.Get("stats.allCharacters")));
         foreach (Character owner in owners)
             CharacterOptions.Add(new FilterOption(owner.Id, owner.DisplayName));
 
@@ -148,16 +152,14 @@ public sealed partial class StatisticsPageViewModel(
         AveragePerYearLabel = Gil(stats.AveragePerYear);
 
         SpanLabel = stats.RecordCount == 0
-            ? "还没有记录"
-            : string.Create(
-                CultureInfo.InvariantCulture,
-                $"{stats.FirstDate:yyyy-MM-dd} 起 {stats.OperatingDays} 天 · {stats.RecordCount} 次收艇");
+            ? Loc.Get("stats.noRecords")
+            : Loc.Format("stats.span", $"{stats.FirstDate:yyyy-MM-dd}", stats.OperatingDays, stats.RecordCount);
 
-        ItemCountLabel = string.Create(CultureInfo.InvariantCulture, $"{stats.ItemCount} 种道具");
+        ItemCountLabel = Loc.Format("stats.itemCount", stats.ItemCount);
 
         Items.Clear();
         foreach (LootStatisticsItem item in stats.ItemsByValue)
-            Items.Add(new ItemShareRowViewModel(item));
+            Items.Add(new ItemShareRowViewModel(item, ResolveItemName(item.ItemId, item.ItemName)));
 
         Characters.Clear();
         foreach (LootStatisticsCharacter item in stats.ByCharacter)
@@ -169,7 +171,7 @@ public sealed partial class StatisticsPageViewModel(
 
         Records.Clear();
         foreach (LootRecord record in filtered)
-            Records.Add(new RecordRowViewModel(record, NameOf(record.CharacterId), this));
+            Records.Add(new RecordRowViewModel(record, NameOf(record.CharacterId), this, ResolveItemName));
 
         RefreshTrend();
 
@@ -179,7 +181,7 @@ public sealed partial class StatisticsPageViewModel(
     private void RebuildSubmarineOptions()
     {
         SubmarineOptions.Clear();
-        SubmarineOptions.Add(new FilterOption(null, "全部艇"));
+        SubmarineOptions.Add(new FilterOption(null, Loc.Get("stats.allSubmarines")));
 
         if (SelectedCharacter?.Id is not { } characterId)
         {
@@ -229,7 +231,7 @@ public sealed partial class StatisticsPageViewModel(
     {
         if (topLevelProvider() is not { } topLevel)
         {
-            StatusMessage = "打不开文件选择器。";
+            StatusMessage = Loc.Get("stats.pickerUnavailable");
             return;
         }
 
@@ -237,13 +239,13 @@ public sealed partial class StatisticsPageViewModel(
         {
             IStorageFile? file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "导出 CSV",
+                Title = Loc.Get("stats.exportTitle"),
                 SuggestedFileName = string.Create(
                     CultureInfo.InvariantCulture,
                     $"subledger-{DateTime.Now:yyyyMMdd-HHmm}.csv"),
                 FileTypeChoices =
                 [
-                    new FilePickerFileType("CSV")
+                    new FilePickerFileType(Loc.Get("stats.csvType"))
                     {
                         Patterns = ["*.csv"],
                         MimeTypes = ["text/csv"],
@@ -259,24 +261,40 @@ public sealed partial class StatisticsPageViewModel(
             await LootCsvExporter.WriteAsync(path, csv).ConfigureAwait(true);
 
             int rows = _filtered.Sum(x => x.Items.Count);
-            StatusMessage = string.Create(CultureInfo.InvariantCulture, $"已导出 {rows} 条明细到 {path}。");
+            StatusMessage = Loc.Format("stats.exported", rows, path);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"导出失败：{exception.Message}";
+            StatusMessage = Loc.Format("stats.exportFailed", exception.Message);
         }
     }
 
     private void RefreshTrend() =>
         Trend = LootTrend.Compute(_filtered, IsMonthly ? TrendGranularity.Month : TrendGranularity.Day);
 
-    private string NameOf(Guid characterId) => _names.GetValueOrDefault(characterId, "未知角色");
+    private string NameOf(Guid characterId) => _names.GetValueOrDefault(characterId, Loc.Get("stats.unknownCharacter"));
+
+    /// <summary>落库记的是日志语言的名字；显示时按 ItemId 换成界面语言。</summary>
+    private string ResolveItemName(uint itemId, string fallback) =>
+        itemId != 0 && TryFindItem(itemId) is { } entry ? entry.DisplayName : fallback;
+
+    private LootCatalogEntry? TryFindItem(uint itemId)
+    {
+        try
+        {
+            return catalog.Value.Find(itemId);
+        }
+        catch (Exception exception) when (exception is IOException or InvalidDataException or FileNotFoundException)
+        {
+            return null;
+        }
+    }
 
     private string SubmarineNameOf(Guid? submarineId) => submarineId is { } id
-        ? _submarineNames.GetValueOrDefault(id, "未知艇")
-        : "未标明艇";
+        ? _submarineNames.GetValueOrDefault(id, Loc.Get("stats.unknownSubmarine"))
+        : Loc.Get("records.subUnmarked");
 
-    private static string Gil(int value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} 吉尔");
+    private static string Gil(int value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} Gil");
 
-    private static string Gil(double value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} 吉尔");
+    private static string Gil(double value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} Gil");
 }

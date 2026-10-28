@@ -12,6 +12,6 @@
   </ItemGroup>
   <ItemGroup>
     <!-- 掉落表随程序分发，用户可查看、可手工补。 -->
-    <None Include="Data\items.ja.json" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="Data\items.json" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
 </Project>

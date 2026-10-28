@@ -1,8 +1,10 @@
 using FFXIVSubLedger.Application.Abstractions;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Backup;
 using FFXIVSubLedger.Application.Characters;
 using FFXIVSubLedger.Application.Settings;
 using FFXIVSubLedger.Infrastructure.Catalog;
+using FFXIVSubLedger.Domain.Settings;
 using FFXIVSubLedger.Infrastructure.Persistence;
 using FFXIVSubLedger.Platform.Windows;
 
@@ -24,6 +26,10 @@ public sealed class ApplicationComposition
         Records = new SqliteLootRecordRepository(database);
         Submarines = new SqliteSubmarineRepository(database);
         Backup = new BackupService(new SqliteBackupStore(database));
+
+        // 界面语言在开窗之前就要定下来，否则首屏会闪一下默认语言。
+        AppSettings settings = Settings.GetAsync().GetAwaiter().GetResult();
+        Loc.Instance.SetLanguage(settings.UiLanguage);
 
         // 词表只在真要用时读，读不到也不至于开不了程序。
         CatalogSource = new Lazy<ItemCatalog>(() => ItemCatalog.Load());

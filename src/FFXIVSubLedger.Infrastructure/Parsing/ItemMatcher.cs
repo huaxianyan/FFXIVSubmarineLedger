@@ -39,7 +39,8 @@ public static class ItemMatcher
 
         foreach (LootCatalogEntry entry in entries)
         {
-            int distance = Levenshtein(normalized, Normalize(entry.Name));
+            // 收集时日志可能是任一语言，所以在该道具的所有写法里取最近的那个。
+            int distance = entry.AllNames.Min(name => Levenshtein(normalized, Normalize(name)));
             if (distance > limit)
                 continue;
 

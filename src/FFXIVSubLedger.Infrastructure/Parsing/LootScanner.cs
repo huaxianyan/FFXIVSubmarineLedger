@@ -115,7 +115,7 @@ public static class LootScanner
                 parsed.ItemText,
                 item,
                 match.Candidates,
-                item.Name,
+                item.CanonicalName,
                 item.ItemId,
                 parsed.Quantity,
                 highQuality,

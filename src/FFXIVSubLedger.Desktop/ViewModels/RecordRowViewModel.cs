@@ -5,8 +5,11 @@ using FFXIVSubLedger.Domain.Records;
 namespace FFXIVSubLedger.Desktop.ViewModels;
 
 /// <summary>统计页里的一条已入账记录。</summary>
-public sealed partial class RecordRowViewModel(LootRecord model, string characterLabel, StatisticsPageViewModel owner)
-    : ObservableObject
+public sealed partial class RecordRowViewModel(
+    LootRecord model,
+    string characterLabel,
+    StatisticsPageViewModel owner,
+    Func<uint, string, string> resolveItemName) : ObservableObject
 {
     internal Guid Id => model.Id;
 
@@ -22,7 +25,7 @@ public sealed partial class RecordRowViewModel(LootRecord model, string characte
         "、",
         model.Items.Select(x => string.Create(
             System.Globalization.CultureInfo.InvariantCulture,
-            $"{x.ItemName}{(x.IsHighQuality ? "(HQ)" : string.Empty)}×{x.Quantity}")));
+            $"{resolveItemName(x.ItemId, x.ItemName)}{(x.IsHighQuality ? "(HQ)" : string.Empty)}×{x.Quantity}")));
 
     [RelayCommand]
     private Task Delete() => owner.DeleteAsync(this);

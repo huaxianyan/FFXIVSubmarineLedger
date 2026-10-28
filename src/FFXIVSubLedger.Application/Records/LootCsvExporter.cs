@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Domain.Records;
 
 namespace FFXIVSubLedger.Application.Records;
@@ -11,34 +12,31 @@ namespace FFXIVSubLedger.Application.Records;
 /// </summary>
 public static class LootCsvExporter
 {
-    private static readonly string[] Header =
-    [
-        "日期",
-        "角色",
-        "部队",
-        "道具",
-        "数量",
-        "品质",
-        "单价",
-        "小计",
-        "备注",
-    ];
-
-    public static string ToCsv(IReadOnlyList<LootRecord> records, IReadOnlyDictionary<Guid, string> characterNames)
+    /// <param name="records">要导出的记录。</param>
+    /// <param name="characterNames">角色名。</param>
+    /// <param name="resolveItemName">把（道具 ID、落库名）换成显示名。不给就原样输出落库名。</param>
+    public static string ToCsv(
+        IReadOnlyList<LootRecord> records,
+        IReadOnlyDictionary<Guid, string> characterNames,
+        Func<uint, string, string>? resolveItemName = null)
     {
         ArgumentNullException.ThrowIfNull(records);
         ArgumentNullException.ThrowIfNull(characterNames);
 
+        resolveItemName ??= static (_, stored) => stored;
+
         var builder = new StringBuilder();
 
-        foreach (string column in Header)
+        foreach (string column in Header())
             builder.Append(Escape(column)).Append(',');
         builder.Length -= 1;
         builder.Append("\r\n");
 
         foreach (LootRecord record in records)
         {
-            string character = characterNames.GetValueOrDefault(record.CharacterId, "未知角色");
+            string character = characterNames.GetValueOrDefault(
+                record.CharacterId,
+                Loc.Get("stats.unknownCharacter"));
 
             foreach (LootItem item in record.Items)
             {
@@ -46,7 +44,7 @@ public static class LootCsvExporter
                     .Append(record.Date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Append(',')
                     .Append(Escape(character)).Append(',')
                     .Append(Escape(record.FreeCompanyId is null ? string.Empty : record.FreeCompanyId.Value.ToString())).Append(',')
-                    .Append(Escape(item.ItemName)).Append(',')
+                    .Append(Escape(resolveItemName(item.ItemId, item.ItemName))).Append(',')
                     .Append(item.Quantity.ToString(CultureInfo.InvariantCulture)).Append(',')
                     .Append(item.IsHighQuality ? "HQ" : "NQ").Append(',')
                     .Append(item.UnitPrice.ToString(CultureInfo.InvariantCulture)).Append(',')
@@ -73,6 +71,19 @@ public static class LootCsvExporter
     }
 
     /// <summary>逗号、引号、换行都要按 CSV 规矩转义。</summary>
+    private static string[] Header() =>
+    [
+        Loc.Get("csv.date"),
+        Loc.Get("csv.character"),
+        Loc.Get("csv.freeCompany"),
+        Loc.Get("csv.item"),
+        Loc.Get("csv.quantity"),
+        Loc.Get("csv.quality"),
+        Loc.Get("csv.unitPrice"),
+        Loc.Get("csv.subtotal"),
+        Loc.Get("csv.note"),
+    ];
+
     private static string Escape(string value)
     {
         if (value.Length == 0)

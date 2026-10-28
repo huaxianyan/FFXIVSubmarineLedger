@@ -1,4 +1,5 @@
 using CommunityToolkit.Mvvm.ComponentModel;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Domain.Catalog;
 using FFXIVSubLedger.Infrastructure.Parsing;
@@ -58,7 +59,7 @@ public sealed partial class LootRowViewModel : ObservableObject
 
     public bool HasCandidateChoice => _candidates.Count > 1;
 
-    public string SubmarineLabel => SubmarineName ?? "未标明艇";
+    public string SubmarineLabel => SubmarineName ?? Loc.Get("records.subUnmarked");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ItemName))]
@@ -88,7 +89,7 @@ public sealed partial class LootRowViewModel : ObservableObject
     [ObservableProperty]
     private bool _isIncluded;
 
-    public string ItemName => SelectedItem?.Name ?? ItemText;
+    public string ItemName => SelectedItem?.DisplayName ?? ItemText;
 
     public bool IsUnknown => SelectedItem is null;
 
@@ -107,7 +108,7 @@ public sealed partial class LootRowViewModel : ObservableObject
     public int Subtotal => UnitPrice * EffectedQuantity;
 
     public string PriceLabel => IsUnknown
-        ? "词表里没有，填单价后才入账"
+        ? Loc.Get("row.unknownPriceHint")
         : string.Create(
             System.Globalization.CultureInfo.InvariantCulture,
             $"@ {UnitPrice:N0}{(EffectiveHighQuality ? "（HQ）" : string.Empty)} = {Subtotal:N0}");

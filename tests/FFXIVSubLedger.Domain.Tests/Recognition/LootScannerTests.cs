@@ -8,12 +8,12 @@ public sealed class LootScannerTests
 {
     private static readonly ItemCatalog Catalog = new(
     [
-        new LootCatalogEntry(22507, "沈没船の高級首飾り", 34500, false),
-        new LootCatalogEntry(22500, "沈没船の指輪", 8000, false),
-        new LootCatalogEntry(23222, "海産油脂", 1, false),
-        new LootCatalogEntry(5189, "エメラルド", 2, true),
-        new LootCatalogEntry(5069, "ゴールドインゴット", 4, true),
-        new LootCatalogEntry(5187, "ルビー", 2, true),
+        TestCatalogData.Item(22507, "沈没船の高級首飾り", 34500, false),
+        TestCatalogData.Item(22500, "沈没船の指輪", 8000, false),
+        TestCatalogData.Item(23222, "海産油脂", 1, false),
+        TestCatalogData.Item(5189, "エメラルド", 2, true),
+        TestCatalogData.Item(5069, "ゴールドインゴット", 4, true),
+        TestCatalogData.Item(5187, "ルビー", 2, true),
     ]);
 
     [Fact]
@@ -57,8 +57,8 @@ public sealed class LootScannerTests
             ["[11:40] テストさんは p沈没船の高級括飾りX5を入手した。"],
             new ItemCatalog(
             [
-                new LootCatalogEntry(22506, "沈没船の高級耳飾り", 30000, false),
-                new LootCatalogEntry(22507, "沈没船の高級首飾り", 34500, false),
+                TestCatalogData.Item(22506, "沈没船の高級耳飾り", 30000, false),
+                TestCatalogData.Item(22507, "沈没船の高級首飾り", 34500, false),
             ]));
 
         RecognizedLoot entry = Assert.Single(loot);

@@ -1,0 +1,218 @@
+[
+  {
+    "itemId": 5069,
+    "names": {
+      "ja": "ゴールドインゴット",
+      "zh-Hans": "黄金锭"
+    },
+    "shopPriceNq": 4,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5168,
+    "names": {
+      "ja": "ジェード",
+      "zh-Hans": "翡翠原石"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": false
+  },
+  {
+    "itemId": 5173,
+    "names": {
+      "ja": "フローライト",
+      "zh-Hans": "萤石"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5177,
+    "names": {
+      "ja": "ペリドット",
+      "zh-Hans": "橄榄石"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5179,
+    "names": {
+      "ja": "アメジスト",
+      "zh-Hans": "紫水晶"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5180,
+    "names": {
+      "ja": "アクアマリン",
+      "zh-Hans": "海蓝石"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5187,
+    "names": {
+      "ja": "ルビー",
+      "zh-Hans": "红宝石"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5188,
+    "names": {
+      "ja": "ダイヤモンド",
+      "zh-Hans": "钻石"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5189,
+    "names": {
+      "ja": "エメラルド",
+      "zh-Hans": "祖母绿"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5190,
+    "names": {
+      "ja": "トパーズ",
+      "zh-Hans": "黄玉"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5191,
+    "names": {
+      "ja": "アイオライト",
+      "zh-Hans": "堇青石"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5192,
+    "names": {
+      "ja": "サファイア",
+      "zh-Hans": "蓝宝石"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12544,
+    "names": {
+      "ja": "スタールビー",
+      "zh-Hans": "星红石"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12545,
+    "names": {
+      "ja": "スターサファイア",
+      "zh-Hans": "星蓝石"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12546,
+    "names": {
+      "ja": "オパール",
+      "zh-Hans": "蛋白石"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 22500,
+    "names": {
+      "ja": "沈没船の指輪",
+      "zh-Hans": "沉船戒指"
+    },
+    "shopPriceNq": 8000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22501,
+    "names": {
+      "ja": "沈没船の腕輪",
+      "zh-Hans": "沉船手镯"
+    },
+    "shopPriceNq": 9000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22502,
+    "names": {
+      "ja": "沈没船の耳飾り",
+      "zh-Hans": "沉船耳饰"
+    },
+    "shopPriceNq": 10000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22503,
+    "names": {
+      "ja": "沈没船の首飾り",
+      "zh-Hans": "沉船项链"
+    },
+    "shopPriceNq": 13000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22504,
+    "names": {
+      "ja": "沈没船の高級指輪",
+      "zh-Hans": "上等沉船戒指"
+    },
+    "shopPriceNq": 27000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22505,
+    "names": {
+      "ja": "沈没船の高級腕輪",
+      "zh-Hans": "上等沉船手镯"
+    },
+    "shopPriceNq": 28500,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22506,
+    "names": {
+      "ja": "沈没船の高級耳飾り",
+      "zh-Hans": "上等沉船耳饰"
+    },
+    "shopPriceNq": 30000,
+    "canBeHq": false
+  },
+  {
+    "itemId": 22507,
+    "names": {
+      "ja": "沈没船の高級首飾り",
+      "zh-Hans": "上等沉船项链"
+    },
+    "shopPriceNq": 34500,
+    "canBeHq": false
+  },
+  {
+    "itemId": 23222,
+    "names": {
+      "ja": "海産油脂",
+      "zh-Hans": "海产油脂"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": false
+  }
+]

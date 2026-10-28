@@ -3,11 +3,12 @@ using FFXIVSubLedger.Domain.Records;
 namespace FFXIVSubLedger.Application.Records;
 
 /// <summary>按道具汇总后的占比行。</summary>
-/// <param name="ItemName">道具名。</param>
+/// <param name="ItemId">道具 ID。词表外的物名为 0。</param>
+/// <param name="ItemName">落库时记下的道具名（日志语言），显示时按界面语言换算。</param>
 /// <param name="Quantity">总数量，HQ 与 NQ 合并计。</param>
 /// <param name="TotalValue">总收益。</param>
 /// <param name="SharePercent">占总收益的百分比，0–100。</param>
-public sealed record LootStatisticsItem(string ItemName, int Quantity, int TotalValue, double SharePercent);
+public sealed record LootStatisticsItem(uint ItemId, string ItemName, int Quantity, int TotalValue, double SharePercent);
 
 /// <summary>按角色拆分后的收益占比。</summary>
 /// <param name="CharacterId">角色 ID。</param>
@@ -73,11 +74,13 @@ public static class LootStatistics
         int months = ((last.Year * 12) + last.Month) - ((first.Year * 12) + first.Month) + 1;
         int years = last.Year - first.Year + 1;
 
+        // 按 ItemId 汇总：同一个道具在不同语言下写法不同，名字不能当键。
         var items = records
             .SelectMany(x => x.Items)
-            .GroupBy(x => x.ItemName, StringComparer.Ordinal)
+            .GroupBy(x => x.ItemId != 0 ? $"i:{x.ItemId}" : $"u:{x.ItemName}", StringComparer.Ordinal)
             .Select(group => new LootStatisticsItem(
-                group.Key,
+                group.First().ItemId,
+                group.First().ItemName,
                 group.Sum(x => x.Quantity),
                 group.Sum(x => x.Subtotal),
                 total == 0 ? 0 : group.Sum(x => x.Subtotal) * 100.0 / total))

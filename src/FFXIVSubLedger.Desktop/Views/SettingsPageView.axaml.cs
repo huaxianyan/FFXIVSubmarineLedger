@@ -10,6 +10,10 @@ public partial class SettingsPageView : UserControl
     protected override void OnDataContextChanged(EventArgs e)
     {
         base.OnDataContextChanged(e);
-        (DataContext as SettingsPageViewModel)?.EnsureCatalogLoaded();
+        if (DataContext is SettingsPageViewModel viewModel)
+        {
+            viewModel.EnsureLanguageSelected();
+            viewModel.EnsureCatalogLoaded();
+        }
     }
 }

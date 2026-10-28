@@ -8,6 +8,7 @@ using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFXIVSubLedger.Application.Abstractions;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
 using FFXIVSubLedger.Domain.Characters;
 using FFXIVSubLedger.Desktop.Services;
@@ -109,7 +110,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [NotifyPropertyChangedFor(nameof(WatchButtonLabel))]
     private bool _isWatching;
 
-    public string WatchButtonLabel => IsWatching ? "停止监听" : "自动监听";
+    public string WatchButtonLabel => IsWatching ? Loc.Get("records.watchStop") : Loc.Get("records.watchStart");
 
     /// <summary>认出的入手记录，逐行可改数量与品质，取消勾选就不入账。</summary>
     public ObservableCollection<LootRowViewModel> LootRows { get; } = [];
@@ -152,7 +153,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         {
             CharacterRowViewModel? target =
                 Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
-            return target is null ? "还没有角色，先到「角色管理」添加一个" : target.DisplayName;
+            return target is null ? Loc.Get("status.noCharacterHint") : target.DisplayName;
         }
     }
 
@@ -184,7 +185,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     {
         if (_topLevelProvider()?.Clipboard is not { } clipboard)
         {
-            StatusMessage = "读不到系统剪贴板。";
+            StatusMessage = Loc.Get("records.clipboardUnavailable");
             return;
         }
 
@@ -194,22 +195,22 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             Bitmap? bitmap = await clipboard.TryGetBitmapAsync().ConfigureAwait(true);
             if (bitmap is not null)
             {
-                Accept(bitmap, "剪贴板");
+                Accept(bitmap, Loc.Get("records.sourceClipboard"));
                 return;
             }
 
             IReadOnlyList<IStorageItem>? items = await clipboard.TryGetFilesAsync().ConfigureAwait(true);
             if (items is { Count: > 0 } && items[0] is IStorageFile file)
             {
-                await LoadFileAsync(file, "剪贴板文件").ConfigureAwait(true);
+                await LoadFileAsync(file, Loc.Get("records.sourceClipboardFile")).ConfigureAwait(true);
                 return;
             }
 
-            StatusMessage = "剪贴板里没有图片。先截好图再试一次。";
+            StatusMessage = Loc.Get("records.clipboardNoImage");
         }
         catch (Exception exception)
         {
-            StatusMessage = $"读剪贴板失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.clipboardFailed", exception.Message);
         }
     }
 
@@ -218,7 +219,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     {
         if (transfer is null)
         {
-            StatusMessage = "没读到拖进来的内容。";
+            StatusMessage = Loc.Get("records.dropEmpty");
             return;
         }
 
@@ -227,21 +228,21 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             Bitmap? bitmap = transfer.TryGetBitmap();
             if (bitmap is not null)
             {
-                Accept(bitmap, "拖入");
+                Accept(bitmap, Loc.Get("records.sourceDrop"));
                 return;
             }
 
             if (transfer.TryGetFile() is IStorageFile file)
             {
-                await LoadFileAsync(file, "拖入文件").ConfigureAwait(true);
+                await LoadFileAsync(file, Loc.Get("records.sourceDropFile")).ConfigureAwait(true);
                 return;
             }
 
-            StatusMessage = "拖进来的内容里没有图片。";
+            StatusMessage = Loc.Get("records.dropNoImage");
         }
         catch (Exception exception)
         {
-            StatusMessage = $"读取拖入内容失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.dropFailed", exception.Message);
         }
     }
 
@@ -249,7 +250,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     {
         if (_topLevelProvider() is not { } topLevel)
         {
-            StatusMessage = "打不开文件选择器。";
+            StatusMessage = Loc.Get("records.pickerUnavailable");
             return;
         }
 
@@ -258,7 +259,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             IReadOnlyList<IStorageFile> files = await topLevel.StorageProvider.OpenFilePickerAsync(
                 new FilePickerOpenOptions
                 {
-                    Title = "选择收艇截图",
+                    Title = Loc.Get("records.pickTitle"),
                     AllowMultiple = false,
                     FileTypeFilter = [FilePickerFileTypes.ImageAll],
                 }).ConfigureAwait(true);
@@ -266,11 +267,11 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             if (files.Count == 0)
                 return;
 
-            await LoadFileAsync(files[0], "图片文件").ConfigureAwait(true);
+            await LoadFileAsync(files[0], Loc.Get("records.sourceFile")).ConfigureAwait(true);
         }
         catch (Exception exception)
         {
-            StatusMessage = $"选择文件失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.pickFailed", exception.Message);
         }
     }
 
@@ -282,11 +283,11 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     {
         try
         {
-            Accept(new Bitmap(path), "启动参数指定");
+            Accept(new Bitmap(path), Loc.Get("records.sourceArgs"));
         }
         catch (Exception exception)
         {
-            StatusMessage = $"打不开这个文件：{exception.Message}";
+            StatusMessage = Loc.Format("records.openFailed", exception.Message);
         }
     }
 
@@ -299,7 +300,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         }
         catch (Exception exception)
         {
-            StatusMessage = $"打不开这个文件：{exception.Message}";
+            StatusMessage = Loc.Format("records.openFailed", exception.Message);
         }
     }
 
@@ -308,9 +309,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         // 旧位图不主动 Dispose：合成器可能还持有它，交给 GC 更稳妥，单张也只有几百 KB。
         Source = bitmap;
         SourceLabel = source;
-        ImageInfo = string.Create(
-            CultureInfo.InvariantCulture,
-            $"{bitmap.PixelSize.Width} × {bitmap.PixelSize.Height} 像素");
+        ImageInfo = Loc.Format("records.imageInfo", bitmap.PixelSize.Width, bitmap.PixelSize.Height);
 
         ScreenshotAnalyzer.AnalyzedScreenshot analyzed = ScreenshotAnalyzer.Analyze(bitmap);
         Overlay = analyzed.Overlay;
@@ -319,17 +318,20 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         {
             LineSummary = string.Empty;
             LineHint = string.Empty;
-            StatusMessage = "没找到文本行。截图里至少要有一段看得清的字。";
+            StatusMessage = Loc.Get("records.linesNotFound");
             return;
         }
 
         int[] heights = [.. analyzed.Lines.Select(x => x.Height)];
-        LineSummary = string.Create(
-            CultureInfo.InvariantCulture,
-            $"切出 {analyzed.Lines.Count} 行 · 行高 {heights.Min()}–{heights.Max()} px · 起始行 {analyzed.Lines[0].Top} px");
+        LineSummary = Loc.Format(
+            "records.lineSummary",
+            analyzed.Lines.Count,
+            heights.Min(),
+            heights.Max(),
+            analyzed.Lines[0].Top);
 
-        LineHint = $"物名与数量还没核对（下一步接行模板与词表）。先看行框有没有切半或者漏行。";
-        StatusMessage = "行已切出，正在认字…";
+        LineHint = Loc.Get("records.lineHint");
+        StatusMessage = Loc.Get("records.linesCut");
 
         _ = RecognizeAsync(analyzed);
     }
@@ -359,15 +361,15 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             ];
 
             OcrText = string.Join(Environment.NewLine, formatted);
-            OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读出 {texts.Count} 行文字");
+            OcrSummary = Loc.Format("records.ocrSummary", texts.Count);
 
             IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog.Value);
 
             ReplaceRows(loot);
 
             StatusMessage = loot.Count == 0
-                ? "没认出入手行。这段日志里可能没有收艇记录。"
-                : "逐行核对数量与品质，确认后写账。";
+                ? Loc.Get("records.noLoot")
+                : Loc.Get("records.confirmHint");
         }
         catch (Exception exception) when (exception is DirectoryNotFoundException or FileNotFoundException)
         {
@@ -375,7 +377,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 return;
 
             OcrSummary = string.Empty;
-            StatusMessage = $"日文 OCR 模型缺失，无法认字：{exception.Message}";
+            StatusMessage = Loc.Format("records.ocrMissing", exception.Message);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
@@ -383,7 +385,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 return;
 
             OcrSummary = string.Empty;
-            StatusMessage = $"文字识别失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.ocrFailed", exception.Message);
         }
         finally
         {
@@ -417,7 +419,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
         _watchCancellation = new CancellationTokenSource();
         IsWatching = true;
-        StatusMessage = "正在监听聊天框…";
+        StatusMessage = Loc.Get("records.watching");
 
         _ = WatchLoopAsync(_watchCancellation.Token);
     }
@@ -433,13 +435,11 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 if (lines.Count > 0)
                 {
                     IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
-                    OcrSummary = string.Create(CultureInfo.InvariantCulture, $"监听中 · 聊天框 {lines.Count} 行");
+                    OcrSummary = Loc.Format("records.watchSummary", lines.Count);
 
                     if (added.Count > 0)
                     {
-                        StatusMessage = string.Create(
-                            CultureInfo.InvariantCulture,
-                            $"监听中：本次读到 {added.Count} 条入手行，已累计 {LootRows.Count} 行待核对。");
+                        StatusMessage = Loc.Format("records.watchAdded", added.Count, LootRows.Count);
                     }
                 }
 
@@ -452,15 +452,15 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"监听中断：{exception.Message}";
+            StatusMessage = Loc.Format("records.watchInterrupted", exception.Message);
         }
         finally
         {
             _watchCancellation?.Dispose();
             _watchCancellation = null;
             IsWatching = false;
-            StatusMessage = StatusMessage.StartsWith("正在监听", StringComparison.Ordinal)
-                ? "已停止监听。"
+            StatusMessage = StatusMessage.StartsWith(Loc.Get("records.watching"), StringComparison.Ordinal)
+                ? Loc.Get("records.watchStopped")
                 : StatusMessage;
         }
     }
@@ -517,26 +517,24 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
             if (lines.Count == 0)
             {
-                StatusMessage = "没读到聊天内容。确认游戏在运行且角色已登录，然后重试。";
+                StatusMessage = Loc.Get("records.chatEmpty");
                 return;
             }
 
             OcrText = string.Join(Environment.NewLine, lines);
-            OcrSummary = string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容");
+            OcrSummary = Loc.Format("records.chatSummary", lines.Count);
 
             IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
             int unknown = added.Count(x => !x.IsKnown);
-            string unknownNote = unknown > 0 ? $"（其中 {unknown} 条词表里没有，需手填单价）" : string.Empty;
+            string unknownNote = unknown > 0 ? Loc.Format("records.chatUnknownNote", unknown) : string.Empty;
 
             StatusMessage = added.Count == 0
-                ? string.Create(CultureInfo.InvariantCulture, $"读到 {lines.Count} 行聊天内容，但没有新的入手行。")
-                : string.Create(
-                    CultureInfo.InvariantCulture,
-                    $"读到 {lines.Count} 行聊天内容，认出 {added.Count} 条入手行{unknownNote}。逐行核对后写账。");
+                ? Loc.Format("records.chatNoLoot", lines.Count)
+                : Loc.Format("records.chatAdded", lines.Count, added.Count, unknownNote);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"读聊天框失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.chatFailed", exception.Message);
         }
         finally
         {
@@ -565,7 +563,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// </summary>
     private static IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(IReadOnlyList<RecognizedLoot> loot)
     {
-        List<SubmarineChoice> choices = [new(string.Empty, "未标明艇")];
+        List<SubmarineChoice> choices = [new(string.Empty, Loc.Get("records.subUnmarked"))];
 
         choices.AddRange(loot
             .Select(x => x.SubmarineName)
@@ -592,11 +590,11 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         LootSummary = LootRows.Count == 0
             ? string.Empty
             : included.Count == 0
-                ? "没有勾选任何一行。"
-                : string.Create(CultureInfo.InvariantCulture, $"本次计入 {included.Count} 行 · 合计 {total:N0} 吉尔");
+                ? Loc.Get("records.summaryNone")
+                : Loc.Format("records.summaryTotal", included.Count, total.ToString("N0", CultureInfo.InvariantCulture));
 
         if (LootSummary.Length > 0 && unknown > 0)
-            LootSummary += string.Create(CultureInfo.InvariantCulture, $"，还有 {unknown} 行没填单价");
+            LootSummary += Loc.Format("records.summaryUnpriced", unknown);
 
         OnPropertyChanged(nameof(HasLootRows));
         OnPropertyChanged(nameof(ShowIntakeGuides));
@@ -615,7 +613,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
         if (target is null)
         {
-            StatusMessage = "还没有角色。先到「角色管理」里添加一个，再记账。";
+            StatusMessage = Loc.Get("records.noCharacter");
             return;
         }
 
@@ -626,7 +624,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
         if (selected.Count == 0)
         {
-            StatusMessage = "没有可入账的行。";
+            StatusMessage = Loc.Get("records.nothingToSave");
             return;
         }
 
@@ -634,9 +632,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         int unpriced = selected.Count(x => x.UnitPrice <= 0);
         if (unpriced > 0)
         {
-            StatusMessage = string.Create(
-                CultureInfo.InvariantCulture,
-                $"还有 {unpriced} 行没填单价（词表里没有的物名），填好再写账。");
+            StatusMessage = Loc.Format("records.unpricedBlocked", unpriced);
             return;
         }
 
@@ -678,16 +674,19 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 total += record.TotalValue;
             }
 
-            string summary = string.Create(
-                CultureInfo.InvariantCulture,
-                $"已记入「{target.DisplayName}」：{date:yyyy-MM-dd} · {records} 笔（按艇分开）· 合计 {total:N0} 吉尔");
+            string summary = Loc.Format(
+                "records.saved",
+                target.DisplayName,
+                $"{date:yyyy-MM-dd}",
+                records,
+                total.ToString("N0", CultureInfo.InvariantCulture));
 
             Clear();
             StatusMessage = summary;
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"写账失败：{exception.Message}";
+            StatusMessage = Loc.Format("records.saveFailed", exception.Message);
         }
     }
 }

@@ -1,3 +1,4 @@
+using FFXIVSubLedger.Application.Localization;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using FFXIVSubLedger.Application.Abstractions;
@@ -42,7 +43,7 @@ public sealed class BackupService(IBackupStore store)
         ArgumentException.ThrowIfNullOrWhiteSpace(path);
 
         if (!File.Exists(path))
-            throw new ValidationException($"找不到备份文件：{path}");
+            throw new ValidationException(Loc.Format("validation.backupMissing", path));
 
         BackupDocument? document;
         try
@@ -54,14 +55,14 @@ public sealed class BackupService(IBackupStore store)
         }
         catch (JsonException)
         {
-            throw new ValidationException("这个文件不是本程序的备份，或者内容已经损坏。");
+            throw new ValidationException(Loc.Get("validation.backupInvalid"));
         }
 
         if (document is null)
-            throw new ValidationException("备份文件是空的。");
+            throw new ValidationException(Loc.Get("validation.backupEmpty"));
 
         if (document.Version != BackupDocument.CurrentVersion)
-            throw new ValidationException($"备份格式版本是 {document.Version}，本程序只认 {BackupDocument.CurrentVersion}。");
+            throw new ValidationException(Loc.Format("validation.backupVersion", document.Version, BackupDocument.CurrentVersion));
 
         HashSet<Guid> characterIds = [.. document.Characters.Select(x => x.Id)];
         Guid? orphan = document.Records
@@ -70,7 +71,7 @@ public sealed class BackupService(IBackupStore store)
             .FirstOrDefault();
 
         if (orphan is not null)
-            throw new ValidationException($"备份里有一笔记录指向不存在的角色（{orphan}），这份备份不完整。");
+            throw new ValidationException(Loc.Format("validation.backupOrphanCharacter", orphan));
 
         HashSet<Guid> submarineIds = [.. document.Submarines.Select(x => x.Id)];
         Guid? orphanSubmarine = document.Records
@@ -79,7 +80,7 @@ public sealed class BackupService(IBackupStore store)
             .FirstOrDefault();
 
         if (orphanSubmarine is not null)
-            throw new ValidationException($"备份里有一笔记录指向不存在的艇（{orphanSubmarine}），这份备份不完整。");
+            throw new ValidationException(Loc.Format("validation.backupOrphanSubmarine", orphanSubmarine));
 
         await store.ImportAsync(document, ct).ConfigureAwait(false);
 

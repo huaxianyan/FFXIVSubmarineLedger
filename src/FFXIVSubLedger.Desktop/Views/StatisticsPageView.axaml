@@ -1,5 +1,6 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:loc="clr-namespace:FFXIVSubLedger.Desktop.Localization"
              xmlns:vm="clr-namespace:FFXIVSubLedger.Desktop.ViewModels"
              xmlns:controls="clr-namespace:FFXIVSubLedger.Desktop.Controls"
              x:Class="FFXIVSubLedger.Desktop.Views.StatisticsPageView"
@@ -11,9 +12,9 @@
             <Border Padding="16" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#0A808080">
                 <StackPanel Orientation="Horizontal" Spacing="14">
-                    <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="筛选" />
+                    <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="{loc:Tr stats.filter}" />
 
-                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="角色" />
+                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="{loc:Tr stats.character}" />
                     <ComboBox FontSize="12" MinWidth="200"
                               ItemsSource="{Binding CharacterOptions}"
                               SelectedItem="{Binding SelectedCharacter}">
@@ -24,7 +25,7 @@
                         </ComboBox.ItemTemplate>
                     </ComboBox>
 
-                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="艇" />
+                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center" Text="{loc:Tr stats.submarine}" />
                     <ComboBox FontSize="12" MinWidth="180"
                               IsEnabled="{Binding CanFilterBySubmarine}"
                               ItemsSource="{Binding SubmarineOptions}"
@@ -37,7 +38,7 @@
                     </ComboBox>
 
                     <TextBlock FontSize="11" Opacity="0.45" VerticalAlignment="Center"
-                               Text="艇名只在角色范围内唯一，所以筛艇要先选角色。" />
+                               Text="{loc:Tr stats.subFilterHint}" />
                 </StackPanel>
             </Border>
 
@@ -45,7 +46,7 @@
                 <Border Grid.Column="0" Padding="16" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="4">
-                        <TextBlock FontSize="12" Opacity="0.6" Text="历史总收益" />
+                        <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.total}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding TotalLabel}" />
                     </StackPanel>
                 </Border>
@@ -53,7 +54,7 @@
                 <Border Grid.Column="1" Padding="16" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="4">
-                        <TextBlock FontSize="12" Opacity="0.6" Text="日均" />
+                        <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perDay}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerDayLabel}" />
                     </StackPanel>
                 </Border>
@@ -61,7 +62,7 @@
                 <Border Grid.Column="2" Padding="16" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="4">
-                        <TextBlock FontSize="12" Opacity="0.6" Text="月均" />
+                        <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perMonth}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerMonthLabel}" />
                     </StackPanel>
                 </Border>
@@ -69,7 +70,7 @@
                 <Border Grid.Column="3" Padding="16" CornerRadius="10" BorderThickness="1"
                         BorderBrush="#40808080" Background="#0A808080">
                     <StackPanel Spacing="4">
-                        <TextBlock FontSize="12" Opacity="0.6" Text="年均" />
+                        <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perYear}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerYearLabel}" />
                     </StackPanel>
                 </Border>
@@ -87,9 +88,9 @@
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
                         <TextBlock FontSize="18" FontWeight="SemiBold" Text="{Binding TrendTitle}" />
                         <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8">
-                            <Button FontSize="11" Content="按日" Command="{Binding ShowDailyCommand}" />
-                            <Button FontSize="11" Content="按月" Command="{Binding ShowMonthlyCommand}" />
-                            <Button FontSize="11" Content="导出 CSV" Command="{Binding ExportCsvCommand}" />
+                            <Button FontSize="11" Content="{loc:Tr stats.byDay}" Command="{Binding ShowDailyCommand}" />
+                            <Button FontSize="11" Content="{loc:Tr stats.byMonth}" Command="{Binding ShowMonthlyCommand}" />
+                            <Button FontSize="11" Content="{loc:Tr stats.exportCsv}" Command="{Binding ExportCsvCommand}" />
                         </StackPanel>
                     </Grid>
                     <controls:TrendChart Height="170" Series="{Binding Trend}" />
@@ -100,7 +101,7 @@
                     BorderBrush="#40808080" Background="#0A808080"
                     IsVisible="{Binding HasRecords}">
                 <StackPanel Spacing="12">
-                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="角色占比" />
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr stats.characterShare}" />
 
                     <ItemsControl ItemsSource="{Binding Characters}">
                         <ItemsControl.ItemTemplate>
@@ -126,7 +127,7 @@
                     BorderBrush="#40808080" Background="#0A808080"
                     IsVisible="{Binding HasRecords}">
                 <StackPanel Spacing="12">
-                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="按艇占比" />
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr stats.submarineShare}" />
 
                     <ItemsControl ItemsSource="{Binding SubmarineShares}">
                         <ItemsControl.ItemTemplate>
@@ -153,7 +154,7 @@
                     IsVisible="{Binding HasRecords}">
                 <StackPanel Spacing="12">
                     <Grid ColumnDefinitions="*,Auto">
-                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="道具占比" />
+                        <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr stats.itemShare}" />
                         <TextBlock Grid.Column="1" FontSize="12" Opacity="0.6" VerticalAlignment="Center"
                                    Text="{Binding ItemCountLabel}" />
                     </Grid>
@@ -182,7 +183,7 @@
                     BorderBrush="#40808080" Background="#0A808080"
                     IsVisible="{Binding HasRecords}">
                 <StackPanel Spacing="12">
-                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="已入账记录" />
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr stats.records}" />
 
                     <ItemsControl ItemsSource="{Binding Records}">
                         <ItemsControl.ItemTemplate>
@@ -196,7 +197,7 @@
                                     <TextBlock Grid.Column="3" FontSize="12" FontWeight="SemiBold"
                                                HorizontalAlignment="Right" VerticalAlignment="Center"
                                                Text="{Binding TotalLabel}" />
-                                    <Button Grid.Column="4" FontSize="11" Content="删除"
+                                    <Button Grid.Column="4" FontSize="11" Content="{loc:Tr stats.delete}"
                                             Command="{Binding DeleteCommand}" />
                                 </Grid>
                             </DataTemplate>
@@ -215,7 +216,7 @@
                     BorderBrush="#40808080" Background="#07808080"
                     IsVisible="{Binding IsEmpty}">
                 <TextBlock FontSize="13" Opacity="0.7" TextWrapping="Wrap"
-                           Text="还没有记录。到「收艇记账」页截图识别一次，确认后就会出现在这里。" />
+                           Text="{loc:Tr stats.empty}" />
             </Border>
         </StackPanel>
     </ScrollViewer>

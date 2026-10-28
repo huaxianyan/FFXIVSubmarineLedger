@@ -1,4 +1,5 @@
 using System.Globalization;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Records;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
@@ -10,15 +11,20 @@ public sealed class SubmarineShareRowViewModel(LootStatisticsSubmarine item, str
 
     public double SharePercent { get; } = item.SharePercent;
 
-    public string RecordCountLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.RecordCount} 次");
+    public string RecordCountLabel { get; } = Loc.Format("stats.times", item.RecordCount);
 
-    public string ValueLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.TotalValue:N0} 吉尔");
+    public string ValueLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.TotalValue:N0} Gil");
 }
 
 /// <summary>确认界面里「这一行属于哪艘艇」的选项。</summary>
 /// <param name="Name">艇名；空串表示未标明。</param>
 /// <param name="Label">下拉里显示的文字。</param>
 public sealed record SubmarineChoice(string Name, string Label);
+
+/// <summary>显示语言下拉里的一项。语言名用各自的语言书写，不随界面语言变。</summary>
+/// <param name="Tag">语言标签，如 <c>zh-Hans</c>。</param>
+/// <param name="Label">该语言自己的写法，如 <c>日本語</c>。</param>
+public sealed record LanguageChoice(string Tag, string Label);
 
 /// <summary>筛选下拉里的一项。</summary>
 /// <param name="Id">对应的实体 ID；null 表示「全部」。</param>

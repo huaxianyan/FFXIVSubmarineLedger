@@ -5,6 +5,9 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFXIVSubLedger.Application.Backup;
 using FFXIVSubLedger.Application.Errors;
+using FFXIVSubLedger.Application.Localization;
+using FFXIVSubLedger.Application.Settings;
+using FFXIVSubLedger.Domain.Settings;
 using FFXIVSubLedger.Infrastructure.Catalog;
 using FFXIVSubLedger.Platform.Windows;
 
@@ -17,16 +20,42 @@ namespace FFXIVSubLedger.Desktop.ViewModels;
 public sealed partial class SettingsPageViewModel(
     Func<TopLevel?> topLevelProvider,
     BackupService backup,
+    SettingsService settings,
     string dataDirectory,
     string databasePath,
     Lazy<ItemCatalog> catalog) : ObservableObject
 {
+    /// <summary>
+    /// 可选的显示语言，直接来自随程序分发的语言资源：加一门语言只需加一个资源，
+    /// 这里不用动。语言只影响界面与道具名，不影响收集。
+    /// </summary>
+    public IReadOnlyList<LanguageChoice> Languages { get; } =
+    [
+        .. Loc.Available.Select(x => new LanguageChoice(x.Tag, x.Name)),
+    ];
+
+    [ObservableProperty]
+    private LanguageChoice? _selectedLanguage = null;
+
+    /// <summary>页面第一次显示时把当前语言对上下拉。</summary>
+    public void EnsureLanguageSelected()
+        => SelectedLanguage ??= Languages.FirstOrDefault(x => x.Tag == Loc.Instance.Language) ?? Languages[0];
+
+    partial void OnSelectedLanguageChanged(LanguageChoice? value)
+    {
+        if (value is null || value.Tag == Loc.Instance.Language || !Loc.Instance.SetLanguage(value.Tag))
+            return;
+
+        _ = settings.SetUiLanguageAsync(value.Tag);
+        StatusMessage = Loc.Get("settings.languageChanged");
+    }
+
     public string DataDirectory { get; } = dataDirectory;
 
     public string DatabasePathLabel { get; } = databasePath;
 
     [ObservableProperty]
-    private string _catalogLabel = "掉落表：读取中…";
+    private string _catalogLabel = string.Empty;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatus))]
@@ -37,15 +66,19 @@ public sealed partial class SettingsPageViewModel(
     /// <summary>页面第一次显示时调用，避免在构造函数里读文件。</summary>
     public void EnsureCatalogLoaded()
     {
+        CatalogLabel = Loc.Get("settings.catalogLoading");
+        LoadCatalogLabel();
+    }
+
+    private void LoadCatalogLabel()
+    {
         try
         {
-            CatalogLabel = string.Create(
-                CultureInfo.InvariantCulture,
-                $"掉落表：{catalog.Value.Entries.Count} 条 · {ItemCatalog.DefaultPath}");
+            CatalogLabel = Loc.Format("settings.catalog", catalog.Value.Entries.Count, ItemCatalog.DefaultPath);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or FileNotFoundException)
         {
-            CatalogLabel = $"掉落表读不到：{exception.Message}";
+            CatalogLabel = Loc.Format("settings.catalogFailed", exception.Message);
         }
     }
 
@@ -55,11 +88,11 @@ public sealed partial class SettingsPageViewModel(
         try
         {
             WindowsShell.OpenFolder(DataDirectory);
-            StatusMessage = "已打开数据目录。";
+            StatusMessage = Loc.Get("settings.opened");
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"打不开数据目录：{exception.Message}";
+            StatusMessage = Loc.Format("settings.openFailed", exception.Message);
         }
     }
 
@@ -68,7 +101,7 @@ public sealed partial class SettingsPageViewModel(
     {
         if (topLevelProvider() is not { } topLevel)
         {
-            StatusMessage = "打不开文件选择器。";
+            StatusMessage = Loc.Get("settings.pickerUnavailable");
             return;
         }
 
@@ -76,7 +109,7 @@ public sealed partial class SettingsPageViewModel(
         {
             IStorageFile? file = await topLevel.StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
-                Title = "导出备份",
+                Title = Loc.Get("settings.exportTitle"),
                 SuggestedFileName = string.Create(
                     CultureInfo.InvariantCulture,
                     $"subledger-backup-{DateTime.Now:yyyyMMdd-HHmm}.json"),
@@ -89,13 +122,11 @@ public sealed partial class SettingsPageViewModel(
             string path = file.Path.LocalPath;
             BackupSummary summary = await backup.ExportAsync(path).ConfigureAwait(true);
 
-            StatusMessage = string.Create(
-                CultureInfo.InvariantCulture,
-                $"已导出到 {path}：{summary.Characters} 个角色、{summary.Records} 笔记录、{summary.Items} 条明细。");
+            StatusMessage = Loc.Format("settings.exported", path, summary.Characters, summary.Records, summary.Items);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"导出失败：{exception.Message}";
+            StatusMessage = Loc.Format("settings.exportFailed", exception.Message);
         }
     }
 
@@ -107,7 +138,7 @@ public sealed partial class SettingsPageViewModel(
     {
         if (topLevelProvider() is not { } topLevel)
         {
-            StatusMessage = "打不开文件选择器。";
+            StatusMessage = Loc.Get("settings.pickerUnavailable");
             return;
         }
 
@@ -116,7 +147,7 @@ public sealed partial class SettingsPageViewModel(
             IReadOnlyList<IStorageFile> files = await topLevel.StorageProvider.OpenFilePickerAsync(
                 new FilePickerOpenOptions
                 {
-                    Title = "选择备份文件",
+                    Title = Loc.Get("settings.importTitle"),
                     AllowMultiple = false,
                     FileTypeFilter = [BackupFileType],
                 }).ConfigureAwait(true);
@@ -133,21 +164,19 @@ public sealed partial class SettingsPageViewModel(
 
             BackupSummary summary = await backup.ImportAsync(files[0].Path.LocalPath).ConfigureAwait(true);
 
-            StatusMessage = string.Create(
-                CultureInfo.InvariantCulture,
-                $"已导入 {summary.Characters} 个角色、{summary.Records} 笔记录。导入前的数据存在 {safetyPath}。");
+            StatusMessage = Loc.Format("settings.imported", summary.Characters, summary.Records, safetyPath);
         }
         catch (ValidationException exception)
         {
-            StatusMessage = $"导入被拒绝：{exception.Message}";
+            StatusMessage = Loc.Format("settings.importRejected", exception.Message);
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {
-            StatusMessage = $"导入失败：{exception.Message}";
+            StatusMessage = Loc.Format("settings.importFailed", exception.Message);
         }
     }
 
-    private static FilePickerFileType BackupFileType => new("JSON 备份")
+    private static FilePickerFileType BackupFileType => new(Loc.Get("settings.backupFileType"))
     {
         Patterns = ["*.json"],
         MimeTypes = ["application/json"],

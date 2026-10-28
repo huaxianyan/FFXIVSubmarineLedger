@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Domain.Characters;
 
 namespace FFXIVSubLedger.Desktop.ViewModels;
@@ -12,7 +13,7 @@ public sealed partial class CharacterRowViewModel(Character model, CharacterMana
 
     public string DisplayName => model.DisplayName;
 
-    public string WorldLabel => string.IsNullOrWhiteSpace(model.World) ? "未指定服务器" : model.World;
+    public string WorldLabel => string.IsNullOrWhiteSpace(model.World) ? Loc.Get("characters.worldMissing") : model.World;
 
     public bool IsActive => model.IsActive;
 
@@ -22,7 +23,7 @@ public sealed partial class CharacterRowViewModel(Character model, CharacterMana
 
     public bool CanSetDefault => !model.IsDefault;
 
-    public string ToggleLabel => model.IsActive ? "停用" : "启用";
+    public string ToggleLabel => model.IsActive ? Loc.Get("characters.disable") : Loc.Get("characters.enable");
 
     [RelayCommand]
     private Task SetDefault() => owner.SetDefaultAsync(this);

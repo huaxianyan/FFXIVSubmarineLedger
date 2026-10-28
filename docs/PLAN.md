@@ -261,7 +261,19 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 
 上述未知项都不影响行模板的主体结构，但换行那一条一旦出现，会让「一行一条入手」的前提失效，因此确认界面必须允许手动补行。
 
-### 6.5 物名词表与纠错
+#### 显示语言（i18n）
+
+界面与道具名支持多语言，**收集不受影响**：日志用哪种语言写，都照常按行模板解析。
+
+- **语言资源**：`src/FFXIVSubLedger.Application/Localization/language-*.json`，作为嵌入式资源随程序分发。每个文件自带 `language.tag`（如 `zh-Hans`、`ja`）与 `language.name`（如 `简体中文`、`日本語`）。
+- **加一门语言不用改代码**：放一个 `language-<任意名>.json`，键与现有语言对齐即可。设置页的语言下拉直接由 `Loc.Available` 生成，键集合由测试 `LocalizationTests.EveryLanguageHasTheSameKeys` 守着。
+- **文件名不能带点号分段的语言名**（如 `strings.ja.json`）：MSBuild 会把它当成附属程序集的文化，只生成卫星程序集，主程序里读不到。这个坑吃过一次，见项目档案。
+- **缺键兜底**：当前语言 → 英语 → 默认语言（`zh-Hans`）→ 任意语言 → 键本身。
+- **道具名跟着界面语言走**：`Data/items.json` 里每条是 `names: { "ja": ..., "zh-Hans": ... }`，用 `ItemId` 绑定。落库的物名只是规范写法，显示时按 `ItemId` 换成当前语言，所以改语言后历史记录也会跟着变。
+- **金额单位统一写 `Gil`**（英文，前面留一个空格，如 `995,392 Gil`）。
+- 界面文案走 `{loc:Tr key}` 标记扩展，绑定到 `Loc` 的索引器，换语言即时生效，不用重启。
+
+## 6.5 物名词表与纠错
 
 - 词表项：`ItemId`、日文名、**NQ 卖店价**、能否 HQ。价格与语言无关，物名按 locale 存（7 节 `ItemName`）。
 - **HQ 价不存表，用公式算**：`HQ = ceil(NQ × 1.1)`。写成整数运算是 `(nq * 11 + 9) / 10`，不用浮点，不会 1 gil 偏差。
@@ -319,7 +331,7 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 
 三个候选规则里只有「向上取整」与全部五条都吻合，因此定为 `ceil`。
 
-数据源已定：日文名与价格均来自 XIVAPI v2 的 `Item` 表（按 `language=ja` 取名称，`PriceLow` 取卖店价，`CanBeHq` 取能否 HQ），随程序分发的 `Data/items.ja.json` 就是这份数据。M4 只需要做「重新拉取 / 用户补充」的入口，不再需要重新选数据源。
+数据源已定：日文名与价格均来自 XIVAPI v2 的 `Item` 表（按 `language=ja` 取名称，`PriceLow` 取卖店价，`CanBeHq` 取能否 HQ），随程序分发的 `Data/items.json` 就是这份数据（同表内按 `ItemId` 绑定各语言物名）。M4 只需要做「重新拉取 / 用户补充」的入口，不再需要重新选数据源。
 
 ### 6.5.2 真实样本端到端实测
 
@@ -457,7 +469,7 @@ M3 与统计页主体已完成。剩下的按价值排序：
 2. ~~文本行定位（行投影 + 行高归一）+ 叠加预览~~：已完成，真实样本 26 行全部切对。
 3. ~~日文 OCR 基线~~：已完成（Tesseract 5 + 自带 `tessdata_fast`），物名 14/14、数量 14/14。
 4. ~~行模板解析出（物名、数量）~~：已完成。
-5. ~~建日文潜艇掉落词表~~：已完成，`Data/items.ja.json` 共 12 条。
+5. ~~建日文潜艇掉落词表~~：已完成，`Data/items.json` 共 24 条，每条带日文与简体中文两个物名。
 6. ~~确认界面与落库~~：已完成（逐行可改数量 / HQ / 候选，按「`ItemId` + 品质」合并后写入 SQLite）。
 7. ~~统计页：指标卡 + 道具占比 + 已入账记录列表（可删）~~：已完成。
 8. ~~记录列表能看能删~~：已并入统计页。

@@ -1,3 +1,4 @@
+using FFXIVSubLedger.Application.Localization;
 using FFXIVSubLedger.Application.Abstractions;
 using FFXIVSubLedger.Application.Errors;
 using FFXIVSubLedger.Domain.Characters;
@@ -23,12 +24,12 @@ public sealed class CharacterService(ICharacterRepository characters)
         name = name?.Trim() ?? string.Empty;
         world = world?.Trim() ?? string.Empty;
         if (name.Length == 0)
-            throw new ValidationException("角色名不能为空。");
+            throw new ValidationException(Loc.Get("validation.nameRequired"));
 
         IReadOnlyList<Character> existing = await characters.ListAsync(ct).ConfigureAwait(false);
         if (existing.Any(x => string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
                               && string.Equals(x.World, world, StringComparison.OrdinalIgnoreCase)))
-            throw new ValidationException($"角色「{name}」已经存在。");
+            throw new ValidationException(Loc.Format("validation.duplicate", name));
 
         Character character = new()
         {
@@ -46,7 +47,7 @@ public sealed class CharacterService(ICharacterRepository characters)
         Character character = await RequireAsync(id, ct).ConfigureAwait(false);
         name = name?.Trim() ?? string.Empty;
         if (name.Length == 0)
-            throw new ValidationException("角色名不能为空。");
+            throw new ValidationException(Loc.Get("validation.nameRequired"));
 
         character.Name = name;
         character.World = world?.Trim() ?? string.Empty;
@@ -57,7 +58,7 @@ public sealed class CharacterService(ICharacterRepository characters)
     {
         IReadOnlyList<Character> all = await characters.ListAsync(ct).ConfigureAwait(false);
         if (all.All(x => x.Id != id))
-            throw new ValidationException("角色不存在。");
+            throw new ValidationException(Loc.Get("validation.characterMissing"));
 
         // 默认角色全局唯一。
         foreach (Character item in all)
@@ -109,5 +110,5 @@ public sealed class CharacterService(ICharacterRepository characters)
 
     private async Task<Character> RequireAsync(Guid id, CancellationToken ct)
         => await characters.FindAsync(id, ct).ConfigureAwait(false)
-           ?? throw new ValidationException("角色不存在。");
+           ?? throw new ValidationException(Loc.Get("validation.characterMissing"));
 }

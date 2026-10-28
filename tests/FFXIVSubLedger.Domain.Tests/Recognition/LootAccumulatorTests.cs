@@ -80,7 +80,7 @@ public sealed class LootAccumulatorTests
     private static RecognizedLoot Entry(string submarine, string rawLine) => new(
         LineNumber: 1,
         ItemText: "沈没船の高級首飾り",
-        Item: new LootCatalogEntry(22507, "沈没船の高級首飾り", 34500, false),
+        Item: TestCatalogData.Item(22507, "沈没船の高級首飾り", 34500, false),
         Candidates: [],
         ItemName: "沈没船の高級首飾り",
         ItemId: 22507,

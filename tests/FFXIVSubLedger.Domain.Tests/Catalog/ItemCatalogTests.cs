@@ -16,11 +16,11 @@ public sealed class ItemCatalogTests
 
         // 聊天框直读会带来截图里没出现过的宝石，词表少一条就会变成「未命中」。
         LootCatalogEntry starRuby = Assert.IsType<LootCatalogEntry>(catalog.Find(12544));
-        Assert.Equal("スタールビー", starRuby.Name);
+        Assert.Equal("スタールビー", starRuby.CanonicalName);
         Assert.Equal(3, starRuby.ShopPriceNq);
 
         LootCatalogEntry necklace = Assert.IsType<LootCatalogEntry>(catalog.Find(22507));
-        Assert.Equal("沈没船の高級首飾り", necklace.Name);
+        Assert.Equal("沈没船の高級首飾り", necklace.CanonicalName);
         Assert.Equal(34500, necklace.ShopPriceNq);
         Assert.False(necklace.CanBeHq);
     }
@@ -33,8 +33,8 @@ public sealed class ItemCatalogTests
             path,
             """
             [
-              { "itemId": 1, "name": "あ", "shopPriceNq": 1, "canBeHq": false },
-              { "itemId": 1, "name": "い", "shopPriceNq": 2, "canBeHq": false }
+              { "itemId": 1, "names": { "ja": "あ" }, "shopPriceNq": 1, "canBeHq": false },
+              { "itemId": 1, "names": { "ja": "い" }, "shopPriceNq": 2, "canBeHq": false }
             ]
             """);
 
@@ -53,8 +53,8 @@ public sealed class ItemCatalogTests
     {
         var entries = new List<LootCatalogEntry>
         {
-            new(1, "沈没船の首飾り", 13000, false),
-            new(2, "沈没船の高級首飾り", 34500, false),
+            TestCatalogData.Item(1, "沈没船の首飾り", 13000, false),
+            TestCatalogData.Item(2, "沈没船の高級首飾り", 34500, false),
         };
 
         ItemMatch match = ItemMatcher.Match("沈没船の高級括飾り", entries);
@@ -69,8 +69,8 @@ public sealed class ItemCatalogTests
     {
         var entries = new List<LootCatalogEntry>
         {
-            new(1, "テストアイテム甲", 10, false),
-            new(2, "テストアイテム乙", 20, false),
+            TestCatalogData.Item(1, "テストアイテム甲", 10, false),
+            TestCatalogData.Item(2, "テストアイテム乙", 20, false),
         };
 
         ItemMatch match = ItemMatcher.Match("テストアイテム丙", entries);
@@ -82,7 +82,7 @@ public sealed class ItemCatalogTests
     [Fact]
     public void Match_GivesUpWhenNothingIsCloseEnough()
     {
-        ItemMatch match = ItemMatcher.Match("まったく別の物", [new LootCatalogEntry(1, "エメラルド", 2, true)]);
+        ItemMatch match = ItemMatcher.Match("まったく別の物", [TestCatalogData.Item(1, "エメラルド", 2, true)]);
 
         Assert.Null(match.Item);
         Assert.Empty(match.Candidates);
