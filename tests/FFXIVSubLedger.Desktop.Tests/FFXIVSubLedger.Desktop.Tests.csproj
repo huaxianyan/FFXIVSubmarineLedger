@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <IsPackable>false</IsPackable>
+    <!-- Avalonia 无头测试需要 apphost，否则报「找不到 app host executable」 -->
+    <OutputType>Exe</OutputType>
+    <UseAppHost>true</UseAppHost>
+    <RootNamespace>FFXIVSubLedger.Desktop.Tests</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Headless.XUnit" Version="12.1.1" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+    <PackageReference Include="xunit.v3" Version="3.2.2" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\FFXIVSubLedger.Desktop\FFXIVSubLedger.Desktop.csproj" />
+  </ItemGroup>
+  <!-- 视图原样拷到输出目录，用来校验 {loc:Tr} 用到的键在每门语言里都存在。
+       Avalonia 的构建目标会接管 .axaml 项，所以用一个显式拷贝目标，而不是 None + CopyToOutputDirectory。 -->
+  <Target Name="CopyViewsForTests" AfterTargets="Build">
+    <ItemGroup>
+      <ViewFiles Include="$(MSBuildThisFileDirectory)..\..\src\FFXIVSubLedger.Desktop\Views\*.axaml" />
+    </ItemGroup>
+    <Copy SourceFiles="@(ViewFiles)" DestinationFolder="$(OutDir)Views" SkipUnchangedFiles="true" />
+  </Target>
+</Project>

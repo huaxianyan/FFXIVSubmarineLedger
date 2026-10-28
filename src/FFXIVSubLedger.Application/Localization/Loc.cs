@@ -72,7 +72,8 @@ public sealed class Loc : System.ComponentModel.INotifyPropertyChanged
 
         _language = language;
         ItemDisplayLanguage.Current = language;
-        PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs("Item[]"));
+        // 只通知语言本身变了：Avalonia 12 的绑定引擎不会因为 "Item[]" 重新求值索引器路径，
+        // 所以 XAML 文案不绑索引器，而是每处一个 LocalizedText（普通属性通知）。
         PropertyChanged?.Invoke(this, new System.ComponentModel.PropertyChangedEventArgs(nameof(Language)));
         LanguageChanged?.Invoke(this, EventArgs.Empty);
         return true;

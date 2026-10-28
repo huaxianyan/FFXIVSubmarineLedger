@@ -1,13 +1,14 @@
 using Avalonia.Data;
-using FFXIVSubLedger.Application.Localization;
 using Avalonia.Markup.Xaml;
+using FFXIVSubLedger.Application.Localization;
 
 namespace FFXIVSubLedger.Desktop.Localization;
 
 /// <summary>
 /// XAML 里取界面文案：<c>Text="{loc:Tr Records.Save}"</c>。
 ///
-/// 返回的是指向 <see cref="Loc"/> 索引器的绑定，所以换语言时界面会自己刷新，不用重建窗口。
+/// 每个绑定拿到自己的 <see cref="LocalizedText" />，换语言时由 <see cref="Loc" /> 逐个通知，
+/// 界面即时刷新，不用重建窗口。
 /// </summary>
 public sealed class TrExtension : MarkupExtension
 {
@@ -21,8 +22,8 @@ public sealed class TrExtension : MarkupExtension
 
     public override object ProvideValue(IServiceProvider serviceProvider) => new Binding
     {
-        Path = $"[{Key}]",
-        Source = Loc.Instance,
+        Path = nameof(LocalizedText.Value),
+        Source = new LocalizedText(Key),
         Mode = BindingMode.OneWay,
     };
 }

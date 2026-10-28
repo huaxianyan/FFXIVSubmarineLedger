@@ -271,7 +271,9 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 - **缺键兜底**：当前语言 → 英语 → 默认语言（`zh-Hans`）→ 任意语言 → 键本身。
 - **道具名跟着界面语言走**：`Data/items.json` 里每条是 `names: { "ja": ..., "zh-Hans": ... }`，用 `ItemId` 绑定。落库的物名只是规范写法，显示时按 `ItemId` 换成当前语言，所以改语言后历史记录也会跟着变。
 - **金额单位统一写 `Gil`**（英文，前面留一个空格，如 `995,392 Gil`）。
-- 界面文案走 `{loc:Tr key}` 标记扩展，绑定到 `Loc` 的索引器，换语言即时生效，不用重启。
+- 界面文案走 `{loc:Tr key}` 标记扩展。每个绑定拿到自己的 `LocalizedText`（普通属性 + 弱引用登记），换语言时逐个通知，即时生效、不用重启。
+  **不能绑到 `Loc` 的索引器**：Avalonia 12 的绑定引擎不会因 `PropertyChanged("Item[]")`（甚至属性名为空的全量通知）重新求值索引器路径，界面会一直显示旧语言——这个坑用无头测试钉住了，见下。
+- 测试：`tests/FFXIVSubLedger.Desktop.Tests`（xunit v3 + Avalonia.Headless）验证两件事：XAML 文案绑定能在换语言后刷新；视图里用到的每个键在每门语言里都存在。
 
 ## 6.5 物名词表与纠错
 
