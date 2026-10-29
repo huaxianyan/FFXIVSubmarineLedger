@@ -1,3 +1,4 @@
+using Avalonia.Skia;
 using Avalonia;
 using Avalonia.Headless;
 using Avalonia.Themes.Fluent;
@@ -15,5 +16,7 @@ public sealed class TestApplication : Avalonia.Application
 public static class TestAppBuilder
 {
     public static AppBuilder BuildAvaloniaApp() =>
-        AppBuilder.Configure<TestApplication>().UseHeadless(new AvaloniaHeadlessPlatformOptions());
+        AppBuilder.Configure<TestApplication>()
+            .UseHeadless(new AvaloniaHeadlessPlatformOptions { UseHeadlessDrawing = false })
+            .UseSkia();
 }

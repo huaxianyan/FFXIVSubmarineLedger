@@ -185,7 +185,7 @@
                                                TextTrimming="CharacterEllipsis" Text="{Binding CharacterLabel}" />
                                     <TextBlock Grid.Column="2" FontSize="12" Opacity="0.6" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" Text="{Binding DetailLabel}" />
-<StackPanel Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+<StackPanel Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <TextBlock FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"
                                                    Text="{Binding TotalLabel}" />
                                         <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"

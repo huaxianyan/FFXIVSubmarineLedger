@@ -57,3 +57,18 @@
 以及角色页的「既定／停止中／有効化」都应跟着变；切换不需要重启。
 
 语言只影响显示，不影响收集：切到日语后照样能读日文日志。
+
+## 不动窗口核对排版
+
+改界面后不必开程序截图，两种方式都能自己看：
+
+```bash
+# 1) 静态检查：Grid.Column / Grid.Row 是否超出所在 Grid 的列数/行数
+#    （写错列号时 Avalonia 不报错，控件会压到别的东西上）
+dotnet test tests/FFXIVSubmarineLedger.Desktop.Tests --filter XamlGridColumnTests
+
+# 2) 无头渲染：把统计页渲染成 PNG，不开窗口、不抢焦点
+PROBE_OUT=/绝对路径/stats.png dotnet test tests/FFXIVSubmarineLedger.Desktop.Tests --filter RenderProbe
+```
+
+第 2 条用的是 Avalonia 的 headless 模式加 Skia 渲染，画面和真窗口一致，但不会出现在桌面上。

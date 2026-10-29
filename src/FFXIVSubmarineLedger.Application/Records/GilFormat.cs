@@ -25,7 +25,7 @@ public static class GilFormat
 
     /// <summary>
     /// 概数写法，主显示用：<c>363,215,608</c> → <c>3 亿 Gil</c>，<c>995,392</c> → <c>99 万 Gil</c>。
-    /// 一万以下原样（那时本来就很短）。**不保留小数**——看的是量级。
+    /// 一万以下原样（那时本来就很短）。最多一位小数。
     /// </summary>
     public static string Compact(long value)
     {
@@ -35,8 +35,8 @@ public static class GilFormat
             return Full(value);
 
         return magnitude < HundredMillion
-            ? string.Create(CultureInfo.InvariantCulture, $"{magnitude / Unit} {Loc.Get("money.tenThousand")} Gil")
-            : string.Create(CultureInfo.InvariantCulture, $"{magnitude / HundredMillion} {Loc.Get("money.hundredMillion")} Gil");
+            ? string.Create(CultureInfo.InvariantCulture, $"{Trim(magnitude / (double)Unit):0.#} {Loc.Get("money.tenThousand")} Gil")
+            : string.Create(CultureInfo.InvariantCulture, $"{Trim(magnitude / (double)HundredMillion):0.#} {Loc.Get("money.hundredMillion")} Gil");
     }
 
     /// <summary>只要数值的概数写法，不带 <c>Gil</c>：给图表坐标轴这种地方用。</summary>
@@ -48,10 +48,16 @@ public static class GilFormat
             return value.ToString("N0", CultureInfo.InvariantCulture);
 
         return magnitude < HundredMillion
-            ? string.Create(CultureInfo.InvariantCulture, $"{magnitude / Unit} {Loc.Get("money.tenThousand")}")
-            : string.Create(CultureInfo.InvariantCulture, $"{magnitude / HundredMillion} {Loc.Get("money.hundredMillion")}");
+            ? string.Create(CultureInfo.InvariantCulture, $"{Trim(magnitude / (double)Unit):0.#} {Loc.Get("money.tenThousand")}")
+            : string.Create(CultureInfo.InvariantCulture, $"{Trim(magnitude / (double)HundredMillion):0.#} {Loc.Get("money.hundredMillion")}");
     }
 
     /// <summary>概数与精确值是否不同。相同（一万以下）就不用显示副行。</summary>
     public static bool HasDetail(long value) => Math.Abs(value) >= Unit;
+
+    /// <summary>
+    /// 截断到一位小数，不四舍五入：否则 99,999,999 会变成「10000 万」，
+    /// 那既不是一万万也不是一亿，量级是错的。
+    /// </summary>
+    private static double Trim(double value) => Math.Truncate(value * 10) / 10;
 }
