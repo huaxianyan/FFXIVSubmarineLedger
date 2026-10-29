@@ -16,8 +16,8 @@
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.total}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding TotalLabel}" />
                         <TextBlock FontSize="11" Opacity="0.5"
-                                   IsVisible="{Binding TotalCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                   Text="{Binding TotalCompactLabel}" />
+                                   IsVisible="{Binding TotalDetailLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding TotalDetailLabel}" />
                     </StackPanel>
                 </Border>
 
@@ -27,8 +27,8 @@
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perDay}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerDayLabel}" />
                         <TextBlock FontSize="11" Opacity="0.5"
-                                   IsVisible="{Binding AveragePerDayCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                   Text="{Binding AveragePerDayCompactLabel}" />
+                                   IsVisible="{Binding AveragePerDayDetailLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerDayDetailLabel}" />
                     </StackPanel>
                 </Border>
 
@@ -38,8 +38,8 @@
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perMonth}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerMonthLabel}" />
                         <TextBlock FontSize="11" Opacity="0.5"
-                                   IsVisible="{Binding AveragePerMonthCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                   Text="{Binding AveragePerMonthCompactLabel}" />
+                                   IsVisible="{Binding AveragePerMonthDetailLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerMonthDetailLabel}" />
                     </StackPanel>
                 </Border>
 
@@ -49,8 +49,8 @@
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perYear}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerYearLabel}" />
                         <TextBlock FontSize="11" Opacity="0.5"
-                                   IsVisible="{Binding AveragePerYearCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
-                                   Text="{Binding AveragePerYearCompactLabel}" />
+                                   IsVisible="{Binding AveragePerYearDetailLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerYearDetailLabel}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -96,8 +96,8 @@
                                         <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
                                                    Text="{Binding ValueLabel}" />
                                         <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
-                                                   IsVisible="{Binding HasCompactValue}"
-                                                   Text="{Binding CompactValueLabel}" />
+                                                   IsVisible="{Binding HasDetailValue}"
+                                                   Text="{Binding DetailValueLabel}" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -126,8 +126,8 @@
                                         <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
                                                    Text="{Binding ValueLabel}" />
                                         <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
-                                                   IsVisible="{Binding HasCompactValue}"
-                                                   Text="{Binding CompactValueLabel}" />
+                                                   IsVisible="{Binding HasDetailValue}"
+                                                   Text="{Binding DetailValueLabel}" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -160,8 +160,8 @@
                                         <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
                                                    Text="{Binding ValueLabel}" />
                                         <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
-                                                   IsVisible="{Binding HasCompactValue}"
-                                                   Text="{Binding CompactValueLabel}" />
+                                                   IsVisible="{Binding HasDetailValue}"
+                                                   Text="{Binding DetailValueLabel}" />
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
@@ -189,8 +189,8 @@
                                         <TextBlock FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"
                                                    Text="{Binding TotalLabel}" />
                                         <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
-                                                   IsVisible="{Binding HasCompactTotal}"
-                                                   Text="{Binding CompactTotalLabel}" />
+                                                   IsVisible="{Binding HasDetailTotal}"
+                                                   Text="{Binding DetailTotalLabel}" />
                                     </StackPanel>
                                     <Button Grid.Column="4" FontSize="11" Content="{loc:Tr stats.delete}"
                                             Command="{Binding DeleteCommand}" />

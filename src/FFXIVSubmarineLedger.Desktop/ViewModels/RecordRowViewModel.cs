@@ -18,12 +18,13 @@ public sealed partial class RecordRowViewModel(
 
     public string CharacterLabel { get; } = characterLabel;
 
-    public string TotalLabel { get; } = GilFormat.Full(model.TotalValue);
+    /// <summary>主显示：带单位的概数（19 万 Gil）。</summary>
+    public string TotalLabel { get; } = GilFormat.Compact(model.TotalValue);
 
-    /// <summary>紧凑写法（99.5 万 Gil）。一万以下不显示。</summary>
-    public string CompactTotalLabel { get; } = GilFormat.Compact(model.TotalValue);
+    /// <summary>副行：精确值（190,177 Gil）。</summary>
+    public string DetailTotalLabel { get; } = GilFormat.Full(model.TotalValue);
 
-    public bool HasCompactTotal => model.TotalValue >= 10_000;
+    public bool HasDetailTotal => GilFormat.HasDetail(model.TotalValue);
 
     public string DetailLabel { get; } = string.Join(
         "、",

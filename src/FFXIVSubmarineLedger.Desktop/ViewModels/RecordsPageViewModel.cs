@@ -112,10 +112,10 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     public string WatchButtonLabel => IsWatching ? Loc.Get("records.watchStop") : Loc.Get("records.watchStart");
 
-    /// <summary>完整金额，够大时后面补一句紧凑写法。句子里的金额都走这里。</summary>
+    /// <summary>句子里的金额：概数在前，精确值放括号，与界面主副关系一致。</summary>
     private static string MoneyWithCompact(long value) =>
-        value >= 10_000
-            ? string.Create(CultureInfo.InvariantCulture, $"{GilFormat.Full(value)}（{GilFormat.Compact(value)}）")
+        GilFormat.HasDetail(value)
+            ? string.Create(CultureInfo.InvariantCulture, $"{GilFormat.Compact(value)}（{GilFormat.Full(value)}）")
             : GilFormat.Full(value);
 
     /// <summary>换语言后刷新页内由代码拼出来的文字。</summary>

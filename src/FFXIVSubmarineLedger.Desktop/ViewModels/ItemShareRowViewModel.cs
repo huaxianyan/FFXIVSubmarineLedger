@@ -15,10 +15,11 @@ public sealed class ItemShareRowViewModel(LootStatisticsItem item, string displa
 
     public string QuantityLabel { get; } = string.Create(CultureInfo.InvariantCulture, $"{item.Quantity:N0}");
 
-    public string ValueLabel { get; } = GilFormat.Full(item.TotalValue);
+    /// <summary>主显示：带单位的概数，一眼看出量级（99.5 万 Gil）。</summary>
+    public string ValueLabel { get; } = GilFormat.Compact(item.TotalValue);
 
-    /// <summary>紧凑写法，让量级一眼看得出（3.63 亿 Gil）。</summary>
-    public string CompactValueLabel { get; } = GilFormat.Compact(item.TotalValue);
+    /// <summary>副行：精确值，要核对时看（995,392 Gil）。</summary>
+    public string DetailValueLabel { get; } = GilFormat.Full(item.TotalValue);
 
-    public bool HasCompactValue => item.TotalValue >= 10_000;
+    public bool HasDetailValue => GilFormat.HasDetail(item.TotalValue);
 }

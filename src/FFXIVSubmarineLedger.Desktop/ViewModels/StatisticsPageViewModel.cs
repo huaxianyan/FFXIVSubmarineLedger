@@ -58,18 +58,18 @@ public sealed partial class StatisticsPageViewModel(
     [ObservableProperty]
     private string _totalLabel = "0";
 
-    /// <summary>总收益的紧凑写法（3.63 亿 Gil）。一万以下为空，不占位。</summary>
+    /// <summary>总收益的精确值（363,215,608 Gil），作副行。一万以下为空，不占位。</summary>
     [ObservableProperty]
-    private string _totalCompactLabel = string.Empty;
+    private string _totalDetailLabel = string.Empty;
 
     [ObservableProperty]
-    private string _averagePerDayCompactLabel = string.Empty;
+    private string _averagePerDayDetailLabel = string.Empty;
 
     [ObservableProperty]
-    private string _averagePerMonthCompactLabel = string.Empty;
+    private string _averagePerMonthDetailLabel = string.Empty;
 
     [ObservableProperty]
-    private string _averagePerYearCompactLabel = string.Empty;
+    private string _averagePerYearDetailLabel = string.Empty;
 
     [ObservableProperty]
     private string _averagePerDayLabel = "0";
@@ -166,14 +166,14 @@ public sealed partial class StatisticsPageViewModel(
         _filtered = filtered;
         LootStatisticsSnapshot stats = LootStatistics.Compute(filtered);
 
-        TotalLabel = Gil(stats.TotalValue);
-        TotalCompactLabel = GilCompact(stats.TotalValue);
-        AveragePerDayCompactLabel = GilCompact(stats.AveragePerDay);
-        AveragePerMonthCompactLabel = GilCompact(stats.AveragePerMonth);
-        AveragePerYearCompactLabel = GilCompact(stats.AveragePerYear);
-        AveragePerDayLabel = Gil(stats.AveragePerDay);
-        AveragePerMonthLabel = Gil(stats.AveragePerMonth);
-        AveragePerYearLabel = Gil(stats.AveragePerYear);
+        TotalLabel = GilCompact(stats.TotalValue);
+        TotalDetailLabel = GilDetail(stats.TotalValue);
+        AveragePerDayLabel = GilCompact(stats.AveragePerDay);
+        AveragePerDayDetailLabel = GilDetail(stats.AveragePerDay);
+        AveragePerMonthLabel = GilCompact(stats.AveragePerMonth);
+        AveragePerMonthDetailLabel = GilDetail(stats.AveragePerMonth);
+        AveragePerYearLabel = GilCompact(stats.AveragePerYear);
+        AveragePerYearDetailLabel = GilDetail(stats.AveragePerYear);
 
         SpanLabel = stats.RecordCount == 0
             ? Loc.Get("stats.noRecords")
@@ -318,12 +318,13 @@ public sealed partial class StatisticsPageViewModel(
         ? _submarineNames.GetValueOrDefault(id, Loc.Get("stats.unknownSubmarine"))
         : Loc.Get("records.subUnmarked");
 
-    private static string Gil(long value) => GilFormat.Full(value);
+    /// <summary>主显示：带单位的概数。</summary>
+    private static string GilCompact(long value) => GilFormat.Compact(value);
 
-    private static string Gil(double value) => GilFormat.Full(value);
+    private static string GilCompact(double value) => GilFormat.Compact((long)value);
 
-    /// <summary>紧凑写法，卡片上一眼看出量级。一万以下不显示（那时完整写法已经够短）。</summary>
-    private static string GilCompact(long value) => value >= 10_000 ? GilFormat.Compact(value) : string.Empty;
+    /// <summary>副行：精确值。一万以下与主显示相同，留空不占位。</summary>
+    private static string GilDetail(long value) => GilFormat.HasDetail(value) ? GilFormat.Full(value) : string.Empty;
 
-    private static string GilCompact(double value) => value >= 10_000 ? GilFormat.Compact((long)value) : string.Empty;
+    private static string GilDetail(double value) => GilDetail((long)value);
 }

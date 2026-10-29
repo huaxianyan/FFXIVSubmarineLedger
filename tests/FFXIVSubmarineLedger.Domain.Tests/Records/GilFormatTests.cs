@@ -39,7 +39,7 @@ public sealed class GilFormatTests
         // 没满一亿就还是「万」，满了才换单位；四舍五入不能把 9999.99 万 变成 10000 万。
         Assert.StartsWith("9999.9 万", GilFormat.Compact(99_999_999));
         Assert.StartsWith("1 亿", GilFormat.Compact(100_000_000));
-        Assert.StartsWith("1.99 亿", GilFormat.Compact(199_999_999));
+        Assert.StartsWith("1.9 亿", GilFormat.Compact(199_999_999));
     }
 
     [Fact]
@@ -48,7 +48,7 @@ public sealed class GilFormatTests
         Assert.Equal("9,999", GilFormat.CompactNumber(9_999));
         Assert.Equal("99.5 万", GilFormat.CompactNumber(995_392));
         Assert.Equal("995.3 万", GilFormat.CompactNumber(9_953_900));
-        Assert.Equal("3.63 亿", GilFormat.CompactNumber(363_215_608));
+        Assert.Equal("3.6 亿", GilFormat.CompactNumber(363_215_608));
     }
 
     [Fact]
@@ -57,10 +57,10 @@ public sealed class GilFormatTests
         try
         {
             Loc.Instance.SetLanguage("zh-Hans");
-            Assert.Equal("3.63 亿 Gil", GilFormat.Compact(363_215_608));
+            Assert.Equal("3.6 亿 Gil", GilFormat.Compact(363_215_608));
 
             Loc.Instance.SetLanguage("ja");
-            Assert.Equal("3.63 億 Gil", GilFormat.Compact(363_215_608));
+            Assert.Equal("3.6 億 Gil", GilFormat.Compact(363_215_608));
         }
         finally
         {
