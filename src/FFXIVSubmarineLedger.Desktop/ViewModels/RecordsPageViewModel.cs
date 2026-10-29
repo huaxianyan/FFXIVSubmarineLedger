@@ -112,6 +112,12 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     public string WatchButtonLabel => IsWatching ? Loc.Get("records.watchStop") : Loc.Get("records.watchStart");
 
+    /// <summary>完整金额，够大时后面补一句紧凑写法。句子里的金额都走这里。</summary>
+    private static string MoneyWithCompact(long value) =>
+        value >= 10_000
+            ? string.Create(CultureInfo.InvariantCulture, $"{GilFormat.Full(value)}（{GilFormat.Compact(value)}）")
+            : GilFormat.Full(value);
+
     /// <summary>换语言后刷新页内由代码拼出来的文字。</summary>
     public void Relocalize()
     {
@@ -602,7 +608,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             ? string.Empty
             : included.Count == 0
                 ? Loc.Get("records.summaryNone")
-                : Loc.Format("records.summaryTotal", included.Count, total.ToString("N0", CultureInfo.InvariantCulture));
+                : Loc.Format("records.summaryTotal", included.Count, MoneyWithCompact(total));
 
         if (LootSummary.Length > 0 && unknown > 0)
             LootSummary += Loc.Format("records.summaryUnpriced", unknown);
@@ -690,7 +696,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 target.DisplayName,
                 $"{date:yyyy-MM-dd}",
                 records,
-                total.ToString("N0", CultureInfo.InvariantCulture));
+                MoneyWithCompact(total));
 
             Clear();
             StatusMessage = summary;

@@ -8,6 +8,7 @@ namespace FFXIVSubmarineLedger.Domain.Tests.Catalog;
 /// <summary>
 /// 语言资源与多语言物名。加语言时的护栏：少键、少标签都会在这里报出来。
 /// </summary>
+[Collection(LocalizationCollection.Name)]
 public sealed class LocalizationTests
 {
     [Fact]

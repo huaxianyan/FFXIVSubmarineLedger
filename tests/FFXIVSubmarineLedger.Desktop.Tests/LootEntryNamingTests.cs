@@ -11,6 +11,7 @@ namespace FFXIVSubmarineLedger.Desktop.Tests;
 /// 落库用的道具名必须与界面语言无关。曾经这里取的是显示名，结果中文界面下记账会把
 /// 「上等沉船戒指」写进库，日文界面下写「沈没船の高級指輪」——同一种道具在库里有两个名字。
 /// </summary>
+[Collection(LocalizationCollection.Name)]
 public sealed class LootEntryNamingTests
 {
     private static readonly LootCatalogEntry Platinum = new(

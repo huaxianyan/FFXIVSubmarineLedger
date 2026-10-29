@@ -1,5 +1,6 @@
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubmarineLedger.Application.Records;
 using FFXIVSubmarineLedger.Domain.Records;
 
 namespace FFXIVSubmarineLedger.Desktop.ViewModels;
@@ -17,9 +18,12 @@ public sealed partial class RecordRowViewModel(
 
     public string CharacterLabel { get; } = characterLabel;
 
-    public string TotalLabel { get; } = string.Create(
-        System.Globalization.CultureInfo.InvariantCulture,
-        $"{model.TotalValue:N0}");
+    public string TotalLabel { get; } = GilFormat.Full(model.TotalValue);
+
+    /// <summary>紧凑写法（99.5 万 Gil）。一万以下不显示。</summary>
+    public string CompactTotalLabel { get; } = GilFormat.Compact(model.TotalValue);
+
+    public bool HasCompactTotal => model.TotalValue >= 10_000;
 
     public string DetailLabel { get; } = string.Join(
         "、",

@@ -13,6 +13,7 @@ namespace FFXIVSubmarineLedger.Desktop.Tests;
 /// 界面文案的绑定必须能在运行中换语言时刷新——用户反馈过「切到日语还有很多中文」，
 /// 就是这条路径没验证过：之前只验证了「用日语启动」。
 /// </summary>
+[Collection(LocalizationCollection.Name)]
 public sealed class LocalizationBindingTests
 {
     [AvaloniaFact]

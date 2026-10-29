@@ -129,7 +129,8 @@ public sealed class TrendChart : Control
         context.DrawText(formatted, position);
     }
 
-    private static string FormatValue(long value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0}");
+    /// <summary>坐标轴上的金额：大数用紧凑写法（99.5 万），小数照常。<summary>
+    private static string FormatValue(long value) => GilFormat.CompactNumber(value);
 
     private static string FormatPeriod(DateOnly period, TrendGranularity granularity) =>
         period.ToString(granularity == TrendGranularity.Day ? "MM-dd" : "yyyy-MM", CultureInfo.InvariantCulture);

@@ -15,7 +15,8 @@
                     <StackPanel Spacing="4">
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.total}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding TotalLabel}" />
-                        <TextBlock FontSize="11" Opacity="0.5" IsVisible="{Binding TotalCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                        <TextBlock FontSize="11" Opacity="0.5"
+                                   IsVisible="{Binding TotalCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
                                    Text="{Binding TotalCompactLabel}" />
                     </StackPanel>
                 </Border>
@@ -25,6 +26,9 @@
                     <StackPanel Spacing="4">
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perDay}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerDayLabel}" />
+                        <TextBlock FontSize="11" Opacity="0.5"
+                                   IsVisible="{Binding AveragePerDayCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerDayCompactLabel}" />
                     </StackPanel>
                 </Border>
 
@@ -33,6 +37,9 @@
                     <StackPanel Spacing="4">
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perMonth}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerMonthLabel}" />
+                        <TextBlock FontSize="11" Opacity="0.5"
+                                   IsVisible="{Binding AveragePerMonthCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerMonthCompactLabel}" />
                     </StackPanel>
                 </Border>
 
@@ -41,6 +48,9 @@
                     <StackPanel Spacing="4">
                         <TextBlock FontSize="12" Opacity="0.6" Text="{loc:Tr stats.perYear}" />
                         <TextBlock FontSize="22" FontWeight="SemiBold" Text="{Binding AveragePerYearLabel}" />
+                        <TextBlock FontSize="11" Opacity="0.5"
+                                   IsVisible="{Binding AveragePerYearCompactLabel, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"
+                                   Text="{Binding AveragePerYearCompactLabel}" />
                     </StackPanel>
                 </Border>
             </Grid>
@@ -82,9 +92,13 @@
                                                Text="{Binding RecordCountLabel}" />
                                     <ProgressBar Grid.Column="2" Height="6" Minimum="0" Maximum="100"
                                                  VerticalAlignment="Center" Value="{Binding SharePercent}" />
-                                    <TextBlock Grid.Column="3" FontSize="12" Opacity="0.75"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               Text="{Binding ValueLabel}" />
+                                    <StackPanel Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
+                                                   Text="{Binding ValueLabel}" />
+                                        <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasCompactValue}"
+                                                   Text="{Binding CompactValueLabel}" />
+                                    </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -108,9 +122,13 @@
                                                Text="{Binding RecordCountLabel}" />
                                     <ProgressBar Grid.Column="2" Height="6" Minimum="0" Maximum="100"
                                                  VerticalAlignment="Center" Value="{Binding SharePercent}" />
-                                    <TextBlock Grid.Column="3" FontSize="12" Opacity="0.75"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               Text="{Binding ValueLabel}" />
+                                    <StackPanel Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
+                                                   Text="{Binding ValueLabel}" />
+                                        <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasCompactValue}"
+                                                   Text="{Binding CompactValueLabel}" />
+                                    </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -138,9 +156,13 @@
                                                Text="{Binding QuantityLabel}" />
                                     <ProgressBar Grid.Column="2" Height="6" Minimum="0" Maximum="100"
                                                  VerticalAlignment="Center" Value="{Binding SharePercent}" />
-                                    <TextBlock Grid.Column="3" FontSize="12" Opacity="0.75"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               Text="{Binding ValueLabel}" />
+                                    <StackPanel Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock FontSize="12" Opacity="0.75" HorizontalAlignment="Right"
+                                                   Text="{Binding ValueLabel}" />
+                                        <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasCompactValue}"
+                                                   Text="{Binding CompactValueLabel}" />
+                                    </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ItemsControl.ItemTemplate>
@@ -163,9 +185,13 @@
                                                TextTrimming="CharacterEllipsis" Text="{Binding CharacterLabel}" />
                                     <TextBlock Grid.Column="2" FontSize="12" Opacity="0.6" VerticalAlignment="Center"
                                                TextTrimming="CharacterEllipsis" Text="{Binding DetailLabel}" />
-                                    <TextBlock Grid.Column="3" FontSize="12" FontWeight="SemiBold"
-                                               HorizontalAlignment="Right" VerticalAlignment="Center"
-                                               Text="{Binding TotalLabel}" />
+<StackPanel Grid.Column="6" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <TextBlock FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"
+                                                   Text="{Binding TotalLabel}" />
+                                        <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
+                                                   IsVisible="{Binding HasCompactTotal}"
+                                                   Text="{Binding CompactTotalLabel}" />
+                                    </StackPanel>
                                     <Button Grid.Column="4" FontSize="11" Content="{loc:Tr stats.delete}"
                                             Command="{Binding DeleteCommand}" />
                                 </Grid>

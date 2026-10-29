@@ -58,9 +58,18 @@ public sealed partial class StatisticsPageViewModel(
     [ObservableProperty]
     private string _totalLabel = "0";
 
-    /// <summary>总收益的紧凑写法（3.6 亿 Gil）。一万以下为空，不占位。</summary>
+    /// <summary>总收益的紧凑写法（3.63 亿 Gil）。一万以下为空，不占位。</summary>
     [ObservableProperty]
     private string _totalCompactLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _averagePerDayCompactLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _averagePerMonthCompactLabel = string.Empty;
+
+    [ObservableProperty]
+    private string _averagePerYearCompactLabel = string.Empty;
 
     [ObservableProperty]
     private string _averagePerDayLabel = "0";
@@ -159,6 +168,9 @@ public sealed partial class StatisticsPageViewModel(
 
         TotalLabel = Gil(stats.TotalValue);
         TotalCompactLabel = GilCompact(stats.TotalValue);
+        AveragePerDayCompactLabel = GilCompact(stats.AveragePerDay);
+        AveragePerMonthCompactLabel = GilCompact(stats.AveragePerMonth);
+        AveragePerYearCompactLabel = GilCompact(stats.AveragePerYear);
         AveragePerDayLabel = Gil(stats.AveragePerDay);
         AveragePerMonthLabel = Gil(stats.AveragePerMonth);
         AveragePerYearLabel = Gil(stats.AveragePerYear);
@@ -312,4 +324,6 @@ public sealed partial class StatisticsPageViewModel(
 
     /// <summary>紧凑写法，卡片上一眼看出量级。一万以下不显示（那时完整写法已经够短）。</summary>
     private static string GilCompact(long value) => value >= 10_000 ? GilFormat.Compact(value) : string.Empty;
+
+    private static string GilCompact(double value) => value >= 10_000 ? GilFormat.Compact((long)value) : string.Empty;
 }
