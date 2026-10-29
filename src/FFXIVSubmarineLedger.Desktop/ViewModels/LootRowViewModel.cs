@@ -124,9 +124,13 @@ public sealed partial class LootRowViewModel : ObservableObject
             System.Globalization.CultureInfo.InvariantCulture,
             $"@ {UnitPrice:N0}{(EffectiveHighQuality ? "（HQ）" : string.Empty)} = {Subtotal:N0}");
 
+    /// <summary>
+    /// 落库时一律用规范名（词表里的第一门写法），不用当前界面语言的名字：
+    /// 存成显示名的话，切换语言后再落库的记录就会和之前的名字对不上。
+    /// </summary>
     public LootEntryInput ToEntry() => new(
         SelectedItem?.ItemId ?? 0,
-        ItemName,
+        SelectedItem?.CanonicalName ?? ItemText,
         EffectedQuantity,
         EffectiveHighQuality,
         UnitPrice,

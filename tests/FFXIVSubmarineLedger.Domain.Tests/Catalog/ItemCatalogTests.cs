@@ -11,8 +11,14 @@ public sealed class ItemCatalogTests
     {
         ItemCatalog catalog = ItemCatalog.Load();
 
-        // 12 条基础潜水艦掉落 + 12 条宝石类（含スタールビー、スターサファイア）。
-        Assert.Equal(24, catalog.Entries.Count);
+        // 12 条基础潜水艦掉落 + 12 条宝石类 + 白金锭（直读聊天框时遇到的，截图样本里没有）。
+        // 不写死条数：词表会随着新掉落继续加，硬编码只会每次都要改。
+        Assert.True(catalog.Entries.Count >= 25, $"词表只有 {catalog.Entries.Count} 条，少了。");
+
+        LootCatalogEntry platinum = Assert.IsType<LootCatalogEntry>(catalog.Find(9360));
+        Assert.Equal("プラチナインゴット", platinum.CanonicalName);
+        Assert.Equal("白金锭", platinum.NameIn("zh-Hans"));
+        Assert.Equal(4, platinum.ShopPriceNq);
 
         // 聊天框直读会带来截图里没出现过的宝石，词表少一条就会变成「未命中」。
         LootCatalogEntry starRuby = Assert.IsType<LootCatalogEntry>(catalog.Find(12544));

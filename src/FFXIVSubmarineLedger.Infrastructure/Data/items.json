@@ -108,6 +108,15 @@
     "canBeHq": true
   },
   {
+    "itemId": 9360,
+    "names": {
+      "ja": "プラチナインゴット",
+      "zh-Hans": "白金锭"
+    },
+    "shopPriceNq": 4,
+    "canBeHq": true
+  },
+  {
     "itemId": 12544,
     "names": {
       "ja": "スタールビー",
