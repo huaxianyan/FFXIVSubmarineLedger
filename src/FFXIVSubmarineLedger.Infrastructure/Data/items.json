@@ -1,5 +1,23 @@
 [
   {
+    "itemId": 5066,
+    "names": {
+      "ja": "エレクトラムインゴット",
+      "zh-Hans": "绿金锭"
+    },
+    "shopPriceNq": 2,
+    "canBeHq": true
+  },
+  {
+    "itemId": 5067,
+    "names": {
+      "ja": "ローズゴールドインゴット",
+      "zh-Hans": "玫瑰金锭"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
     "itemId": 5069,
     "names": {
       "ja": "ゴールドインゴット",
@@ -7,6 +25,15 @@
     },
     "shopPriceNq": 4,
     "canBeHq": true
+  },
+  {
+    "itemId": 5118,
+    "names": {
+      "ja": "金鉱",
+      "zh-Hans": "金矿"
+    },
+    "shopPriceNq": 1,
+    "canBeHq": false
   },
   {
     "itemId": 5168,
@@ -117,6 +144,51 @@
     "canBeHq": true
   },
   {
+    "itemId": 9733,
+    "names": {
+      "ja": "デッドマンズチェスト",
+      "zh-Hans": "聚灵棺"
+    },
+    "shopPriceNq": 90,
+    "canBeHq": false
+  },
+  {
+    "itemId": 10099,
+    "names": {
+      "ja": "無属性クリスタル",
+      "zh-Hans": "无属性水晶"
+    },
+    "shopPriceNq": 10,
+    "canBeHq": false
+  },
+  {
+    "itemId": 12223,
+    "names": {
+      "ja": "天青石",
+      "zh-Hans": "苍天石原石"
+    },
+    "shopPriceNq": 18,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12224,
+    "names": {
+      "ja": "藍鉄鉱",
+      "zh-Hans": "蓝铁矿"
+    },
+    "shopPriceNq": 17,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12228,
+    "names": {
+      "ja": "翠緑のクラスター",
+      "zh-Hans": "深绿晶簇"
+    },
+    "shopPriceNq": 21,
+    "canBeHq": false
+  },
+  {
     "itemId": 12544,
     "names": {
       "ja": "スタールビー",
@@ -141,6 +213,78 @@
       "zh-Hans": "蛋白石"
     },
     "shopPriceNq": 3,
+    "canBeHq": true
+  },
+  {
+    "itemId": 12585,
+    "names": {
+      "ja": "ダークチェスナットの枝",
+      "zh-Hans": "暗栗树枝"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": false
+  },
+  {
+    "itemId": 12586,
+    "names": {
+      "ja": "バーチの枝",
+      "zh-Hans": "桦树枝"
+    },
+    "shopPriceNq": 3,
+    "canBeHq": false
+  },
+  {
+    "itemId": 12924,
+    "names": {
+      "ja": "バルサ廃材",
+      "zh-Hans": "轻木废材"
+    },
+    "shopPriceNq": 18,
+    "canBeHq": false
+  },
+  {
+    "itemId": 12925,
+    "names": {
+      "ja": "バルサ材",
+      "zh-Hans": "轻木木材"
+    },
+    "shopPriceNq": 19,
+    "canBeHq": false
+  },
+  {
+    "itemId": 12928,
+    "names": {
+      "ja": "鈍色のクリスタル",
+      "zh-Hans": "深色水晶"
+    },
+    "shopPriceNq": 16,
+    "canBeHq": false
+  },
+  {
+    "itemId": 15976,
+    "names": {
+      "ja": "コームドウールラグ",
+      "zh-Hans": "精梳毛布地毯"
+    },
+    "shopPriceNq": 150,
+    "canBeHq": false
+  },
+  {
+    "itemId": 17019,
+    "names": {
+      "ja": "レプリカトレジャー",
+      "zh-Hans": "仿制财宝"
+    },
+    "shopPriceNq": 150,
+    "canBeHq": false
+  },
+  {
+    "itemId": 19967,
+    "names": {
+      "ja": "ロードナイト",
+      "zh-Hans": "蔷薇辉石"
+    },
+    "shopPriceNq": 6,
     "canBeHq": true
   },
   {
@@ -222,6 +366,33 @@
       "zh-Hans": "海产油脂"
     },
     "shopPriceNq": 1,
+    "canBeHq": false
+  },
+  {
+    "itemId": 23875,
+    "names": {
+      "ja": "天然水晶",
+      "zh-Hans": "天然水晶"
+    },
+    "shopPriceNq": 30,
+    "canBeHq": false
+  },
+  {
+    "itemId": 24503,
+    "names": {
+      "ja": "海底の財宝",
+      "zh-Hans": "海底的财宝"
+    },
+    "shopPriceNq": 30,
+    "canBeHq": false
+  },
+  {
+    "itemId": 24908,
+    "names": {
+      "ja": "引き上げられた古銭",
+      "zh-Hans": "打捞上来的古钱"
+    },
+    "shopPriceNq": 10,
     "canBeHq": false
   }
 ]

@@ -46,7 +46,7 @@ FF14 潜艇收益统计工具。收艇后从游戏聊天框里直接读出（也
 ```text
 src/FFXIVSubmarineLedger.Domain            角色、部队、收益记录、道具、卖店价等领域模型
 src/FFXIVSubmarineLedger.Application       用例与仓储接口
-src/FFXIVSubmarineLedger.Infrastructure    SQLite 持久化、文本行解析（`Parsing`）、掉落表（`Catalog` + `Data/items.json`，多语言物名按 ItemId 绑定）
+src/FFXIVSubmarineLedger.Infrastructure    SQLite 持久化、文本行解析（`Parsing`）、掉落表（`Catalog` + `Data/items.json`，多语言物名按 ItemId 绑定，覆盖全部沉船航线产物）
 src/FFXIVSubmarineLedger.Platform.Windows  Windows 数据目录
 src/FFXIVSubmarineLedger.Desktop           Avalonia UI、MVVM、随包分发的 OCR 模型（`Data/tessdata`）
 tests/                               自动化测试
