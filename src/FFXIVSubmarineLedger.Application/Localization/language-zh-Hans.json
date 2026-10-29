@@ -203,5 +203,7 @@
   "settings.updateFailedNetwork": "连不上 GitHub：{0}",
   "settings.updateFailedHttp": "GitHub 返回了 HTTP {0}。",
   "settings.updateFailedBadResponse": "GitHub 的响应读不懂，稍后再试。",
-  "app.tagline": "潜艇收益统计"
+  "app.tagline": "潜艇收益统计",
+  "money.tenThousand": "万",
+  "money.hundredMillion": "亿"
 }

@@ -58,6 +58,10 @@ public sealed partial class StatisticsPageViewModel(
     [ObservableProperty]
     private string _totalLabel = "0";
 
+    /// <summary>总收益的紧凑写法（3.6 亿 Gil）。一万以下为空，不占位。</summary>
+    [ObservableProperty]
+    private string _totalCompactLabel = string.Empty;
+
     [ObservableProperty]
     private string _averagePerDayLabel = "0";
 
@@ -89,7 +93,11 @@ public sealed partial class StatisticsPageViewModel(
     public string TrendTitle => IsMonthly ? Loc.Get("stats.trendMonth") : Loc.Get("stats.trendDay");
 
     /// <summary>换语言后重算页内文字。筛选下拉与统计值在 <see cref="LoadAsync"/> 里重建。</summary>
-    public void Relocalize() => OnPropertyChanged(nameof(TrendTitle));
+    public void Relocalize()
+    {
+        OnPropertyChanged(nameof(TrendTitle));
+        _ = LoadAsync();
+    }
 
     public bool HasStatus => StatusMessage.Length > 0;
 
@@ -150,6 +158,7 @@ public sealed partial class StatisticsPageViewModel(
         LootStatisticsSnapshot stats = LootStatistics.Compute(filtered);
 
         TotalLabel = Gil(stats.TotalValue);
+        TotalCompactLabel = GilCompact(stats.TotalValue);
         AveragePerDayLabel = Gil(stats.AveragePerDay);
         AveragePerMonthLabel = Gil(stats.AveragePerMonth);
         AveragePerYearLabel = Gil(stats.AveragePerYear);
@@ -297,7 +306,10 @@ public sealed partial class StatisticsPageViewModel(
         ? _submarineNames.GetValueOrDefault(id, Loc.Get("stats.unknownSubmarine"))
         : Loc.Get("records.subUnmarked");
 
-    private static string Gil(int value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} Gil");
+    private static string Gil(long value) => GilFormat.Full(value);
 
-    private static string Gil(double value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0} Gil");
+    private static string Gil(double value) => GilFormat.Full(value);
+
+    /// <summary>紧凑写法，卡片上一眼看出量级。一万以下不显示（那时完整写法已经够短）。</summary>
+    private static string GilCompact(long value) => value >= 10_000 ? GilFormat.Compact(value) : string.Empty;
 }

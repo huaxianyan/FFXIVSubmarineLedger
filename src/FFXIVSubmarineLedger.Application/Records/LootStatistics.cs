@@ -8,21 +8,21 @@ namespace FFXIVSubmarineLedger.Application.Records;
 /// <param name="Quantity">总数量，HQ 与 NQ 合并计。</param>
 /// <param name="TotalValue">总收益。</param>
 /// <param name="SharePercent">占总收益的百分比，0–100。</param>
-public sealed record LootStatisticsItem(uint ItemId, string ItemName, int Quantity, int TotalValue, double SharePercent);
+public sealed record LootStatisticsItem(uint ItemId, string ItemName, int Quantity, long TotalValue, double SharePercent);
 
 /// <summary>按角色拆分后的收益占比。</summary>
 /// <param name="CharacterId">角色 ID。</param>
 /// <param name="RecordCount">该角色的收艇次数。</param>
 /// <param name="TotalValue">该角色的总收益。</param>
 /// <param name="SharePercent">占总收益的百分比，0–100。</param>
-public sealed record LootStatisticsCharacter(Guid CharacterId, int RecordCount, int TotalValue, double SharePercent);
+public sealed record LootStatisticsCharacter(Guid CharacterId, int RecordCount, long TotalValue, double SharePercent);
 
 /// <summary>按艇拆分后的收益占比。</summary>
 /// <param name="SubmarineId">艇 ID。日志里没等到归属的收益为 null。</param>
 /// <param name="RecordCount">该艇的收艇次数。</param>
 /// <param name="TotalValue">该艇的总收益。</param>
 /// <param name="SharePercent">占总收益的百分比，0–100。</param>
-public sealed record LootStatisticsSubmarine(Guid? SubmarineId, int RecordCount, int TotalValue, double SharePercent);
+public sealed record LootStatisticsSubmarine(Guid? SubmarineId, int RecordCount, long TotalValue, double SharePercent);
 
 /// <summary>统计页要用的所有数。</summary>
 /// <param name="TotalValue">历史总收益。</param>
@@ -38,7 +38,7 @@ public sealed record LootStatisticsSubmarine(Guid? SubmarineId, int RecordCount,
 /// <param name="ByCharacter">按收益降序的角色占比。</param>
 /// <param name="BySubmarine">按收益降序的艇占比。</param>
 public sealed record LootStatisticsSnapshot(
-    int TotalValue,
+    long TotalValue,
     int RecordCount,
     int ItemCount,
     int OperatingDays,
@@ -66,7 +66,7 @@ public static class LootStatistics
         if (records.Count == 0)
             return new LootStatisticsSnapshot(0, 0, 0, 0, null, null, 0, 0, 0, [], [], []);
 
-        int total = records.Sum(x => x.TotalValue);
+        long total = records.Sum(x => x.TotalValue);
         DateOnly first = records.Min(x => x.Date);
         DateOnly last = records.Max(x => x.Date);
 

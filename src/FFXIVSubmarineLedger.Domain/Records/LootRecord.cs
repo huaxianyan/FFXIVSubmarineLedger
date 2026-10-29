@@ -21,5 +21,5 @@ public sealed class LootRecord
     public List<LootItem> Items { get; set; } = [];
 
     /// <summary>本次收益合计。价格是固定的卖店价，不需要联网查价。</summary>
-    public int TotalValue => Items.Sum(x => x.Subtotal);
+    public long TotalValue => Items.Sum(x => x.Subtotal);
 }

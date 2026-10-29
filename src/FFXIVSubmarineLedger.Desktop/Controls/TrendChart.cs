@@ -61,7 +61,7 @@ public sealed class TrendChart : Control
             context.DrawLine(new Pen(GridBrush, 1), new Point(PaddingLeft, y), new Point(width - PaddingRight, y));
         }
 
-        int max = Math.Max(1, series.MaxValue);
+        long max = Math.Max(1, series.MaxValue);
         int count = series.Points.Count;
 
         Point Position(int index)
@@ -129,7 +129,7 @@ public sealed class TrendChart : Control
         context.DrawText(formatted, position);
     }
 
-    private static string FormatValue(int value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0}");
+    private static string FormatValue(long value) => string.Create(CultureInfo.InvariantCulture, $"{value:N0}");
 
     private static string FormatPeriod(DateOnly period, TrendGranularity granularity) =>
         period.ToString(granularity == TrendGranularity.Day ? "MM-dd" : "yyyy-MM", CultureInfo.InvariantCulture);

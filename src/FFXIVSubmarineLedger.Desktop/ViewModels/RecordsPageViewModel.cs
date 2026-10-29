@@ -595,7 +595,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0),
         ];
 
-        int total = included.Sum(x => x.Subtotal);
+        long total = included.Sum(x => x.Subtotal);
         int unknown = included.Count(x => x.IsUnknown && x.UnitPrice == 0);
 
         LootSummary = LootRows.Count == 0
@@ -654,7 +654,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         try
         {
             int records = 0;
-            int total = 0;
+            long total = 0;
 
             // 一艘艇一笔记录：艇名在日志里是分组凭据，混在一笔里就没法按艇统计了。
             foreach (IGrouping<string?, LootRowViewModel> group in included.GroupBy(x => x.SubmarineName))

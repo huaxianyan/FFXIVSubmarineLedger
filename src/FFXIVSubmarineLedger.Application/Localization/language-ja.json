@@ -203,5 +203,7 @@
   "settings.updateFailedNetwork": "GitHub に接続できません：{0}",
   "settings.updateFailedHttp": "GitHub が HTTP {0} を返しました。",
   "settings.updateFailedBadResponse": "GitHub の応答を解釈できません。しばらくしてから再試行してください。",
-  "app.tagline": "潜水艦収益集計"
+  "app.tagline": "潜水艦収益集計",
+  "money.tenThousand": "万",
+  "money.hundredMillion": "億"
 }

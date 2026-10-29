@@ -15,7 +15,7 @@ public enum TrendGranularity
 /// <summary>趋势图上的一个点。</summary>
 /// <param name="Period">该点代表的日子或月份（月粒度取当月 1 日）。</param>
 /// <param name="TotalValue">该区间的收益合计。</param>
-public sealed record TrendPoint(DateOnly Period, int TotalValue);
+public sealed record TrendPoint(DateOnly Period, long TotalValue);
 
 /// <summary>
 /// 趋势序列。中间没有记录的区间会补 0——不补的话折线会把「那天没收益」
@@ -25,7 +25,7 @@ public sealed record TrendPoint(DateOnly Period, int TotalValue);
 /// <param name="Points">从最早到最晚，无缺口的点序列。</param>
 public sealed record TrendSeries(TrendGranularity Granularity, IReadOnlyList<TrendPoint> Points)
 {
-    public int MaxValue => Points.Count == 0 ? 0 : Points.Max(x => x.TotalValue);
+    public long MaxValue => Points.Count == 0 ? 0 : Points.Max(x => x.TotalValue);
 }
 
 public static class LootTrend
@@ -40,7 +40,7 @@ public static class LootTrend
         DateOnly first = records.Min(x => x.Date);
         DateOnly last = records.Max(x => x.Date);
 
-        Dictionary<DateOnly, int> totals = records
+        Dictionary<DateOnly, long> totals = records
             .GroupBy(x => Key(x.Date, granularity))
             .ToDictionary(group => group.Key, group => group.Sum(x => x.TotalValue));
 

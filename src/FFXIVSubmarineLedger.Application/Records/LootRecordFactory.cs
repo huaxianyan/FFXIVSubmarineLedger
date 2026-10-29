@@ -16,7 +16,7 @@ public sealed record LootEntryInput(
     string ItemName,
     int Quantity,
     bool IsHighQuality,
-    int UnitPrice,
+    long UnitPrice,
     bool IsUnknown);
 
 /// <summary>

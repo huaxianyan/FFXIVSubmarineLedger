@@ -165,7 +165,7 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
                     ItemName = reader.GetString(1),
                     Quantity = reader.GetInt32(2),
                     IsHighQuality = reader.GetInt64(3) != 0,
-                    UnitPrice = reader.GetInt32(4),
+                    UnitPrice = reader.GetInt64(4),
                     IsUnknown = reader.GetInt64(5) != 0,
                 });
             }

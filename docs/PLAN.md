@@ -261,7 +261,13 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 
 上述未知项都不影响行模板的主体结构，但换行那一条一旦出现，会让「一行一条入手」的前提失效，因此确认界面必须允许手动补行。
 
-#### 更新检查与代理
+#### 金额与容量
+
+- **金额一律 `long`**。每天收四艇约 360 万 Gil，一年 3.6 亿；`int` 上限 21.4 亿，六年不到就会溢出，统计页会直接抛 `OverflowException`。SQLite 的 `INTEGER` 本来就是 64 位，只有 C# 这层是瓶颈。写这条时用 30 亿的测试数据复现过。
+- **两种写法并存**：账本要精度，所以主数值是完整千分位（`363,215,608 Gil`）；卡片下面再给一行紧凑写法（`3.63 亿 Gil` / `3.63 億 Gil`），单位词走 i18n 的 `money.tenThousand` / `money.hundredMillion`。四舍五入会把「万」写成 10000 时（≥ 99,995,000）进位到「亿」，免得量级读错。
+- **容量实测量级**：每天 4 笔记录 / 13 条明细的节奏下，一年 **约 1.2 MB**（1460 笔、5840 条明细，约 216 B/明细、864 B/记录），十年约 11 MB。`VACUUM` 后一年 1.15 MB、十年 11 MB。数据库放在 `%LocalAppData%`，这个量级几十年都不需要担心。
+
+### 更新检查与代理
 
 - **只查版本号**：`GET https://api.github.com/repos/huaxianyan/FFXIVSubmarineLedger/releases/latest`，比对 `tag_name` 与当前版本。不下载、不安装、不上传任何东西。
 - 启动时查一次（可在设置页关掉），设置页也能手动查；两处走同一个 `UpdateService`，共享上次结果。

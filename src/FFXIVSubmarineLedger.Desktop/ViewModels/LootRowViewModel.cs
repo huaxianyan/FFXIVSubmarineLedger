@@ -110,13 +110,13 @@ public sealed partial class LootRowViewModel : ObservableObject
     /// <summary>物名允许 HQ 且用户勾了 HQ，才算 HQ 价。</summary>
     public bool EffectiveHighQuality => IsHighQuality && SelectedItem?.CanBeHq == true;
 
-    public int UnitPrice => SelectedItem is { } item
+    public long UnitPrice => SelectedItem is { } item
         ? ShopPrice.For(item.ShopPriceNq, EffectiveHighQuality)
-        : (int)Math.Max(0, UnitPriceOverride);
+        : (long)Math.Max(0, UnitPriceOverride);
 
     public int EffectedQuantity => (int)Math.Max(0, Quantity);
 
-    public int Subtotal => UnitPrice * EffectedQuantity;
+    public long Subtotal => UnitPrice * EffectedQuantity;
 
     public string PriceLabel => IsUnknown
         ? Loc.Get("row.unknownPriceHint")
