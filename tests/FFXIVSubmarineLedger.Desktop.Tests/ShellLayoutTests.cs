@@ -17,7 +17,7 @@ namespace FFXIVSubmarineLedger.Desktop.Tests;
 public sealed class ShellLayoutTests
 {
     [AvaloniaFact]
-    public void LedgerComesRightAfterTheRecognitionPage()
+    public void StatisticsComesBeforeTheLedgerPage()
     {
         (Window window, MainWindowViewModel shell) = Show();
 
@@ -29,7 +29,7 @@ public sealed class ShellLayoutTests
         ];
 
         Assert.Equal(
-            ["收艇记账", "收艇记录", "收益统计", "角色管理", "设置"],
+            ["收艇记账", "收益统计", "收艇记录", "角色管理", "设置"],
             labels);
 
         window.Close();

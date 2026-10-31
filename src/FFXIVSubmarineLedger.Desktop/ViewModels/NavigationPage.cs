@@ -6,11 +6,11 @@ public enum NavigationPage
     /// <summary>收艇记账：截图识别入口。</summary>
     Records,
 
-    /// <summary>收艇记录：逐条明细，筛选也在这里。</summary>
-    Ledger,
-
     /// <summary>收益统计：日/月/年走势。</summary>
     Statistics,
+
+    /// <summary>收艇记录：逐条明细。</summary>
+    Ledger,
 
     /// <summary>角色管理：收益归属对象。</summary>
     Characters,

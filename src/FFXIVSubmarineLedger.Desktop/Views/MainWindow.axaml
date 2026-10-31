@@ -59,10 +59,10 @@
                 <StackPanel Grid.Row="1">
                     <Button Classes.nav="True" Classes.active="{Binding IsRecordsPage}"
                             Command="{Binding ShowRecordsCommand}" Content="{loc:Tr nav.records}" />
-                    <Button Classes.nav="True" Classes.active="{Binding IsLedgerPage}"
-                            Command="{Binding ShowLedgerCommand}" Content="{loc:Tr nav.ledger}" />
                     <Button Classes.nav="True" Classes.active="{Binding IsStatisticsPage}"
                             Command="{Binding ShowStatisticsCommand}" Content="{loc:Tr nav.statistics}" />
+                    <Button Classes.nav="True" Classes.active="{Binding IsLedgerPage}"
+                            Command="{Binding ShowLedgerCommand}" Content="{loc:Tr nav.ledger}" />
                     <Button Classes.nav="True" Classes.active="{Binding IsCharactersPage}"
                             Command="{Binding ShowCharactersCommand}" Content="{loc:Tr nav.characters}" />
                     <Button Classes.nav="True" Classes.active="{Binding IsSettingsPage}"
