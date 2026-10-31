@@ -8,41 +8,6 @@
     <ScrollViewer HorizontalScrollBarVisibility="Disabled">
         <StackPanel Margin="28" Spacing="14">
 
-            <!-- 筛选在这一页：明细是原始数据，统计页跟着这份筛选走 -->
-            <Border Padding="16" CornerRadius="10" BorderThickness="1"
-                    BorderBrush="#40808080" Background="#07808080">
-                <Grid ColumnDefinitions="Auto,*,Auto,*,Auto" ColumnSpacing="10">
-                    <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
-                               Text="{loc:Tr stats.character}" />
-                    <ComboBox Grid.Column="1" FontSize="12" HorizontalAlignment="Left" MinWidth="200"
-                              ItemsSource="{Binding CharacterOptions}"
-                              SelectedItem="{Binding SelectedCharacter}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FilterOption">
-                                <TextBlock FontSize="12" Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <TextBlock Grid.Column="2" FontSize="12" Opacity="0.7" VerticalAlignment="Center"
-                               Text="{loc:Tr stats.submarine}" />
-                    <ComboBox Grid.Column="3" FontSize="12" HorizontalAlignment="Left" MinWidth="200"
-                              IsEnabled="{Binding CanFilterBySubmarine}"
-                              ItemsSource="{Binding SubmarineOptions}"
-                              SelectedItem="{Binding SelectedSubmarine}"
-                              ToolTip.Tip="{loc:Tr stats.subFilterHint}">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:FilterOption">
-                                <TextBlock FontSize="12" Text="{Binding Label}" />
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-
-                    <TextBlock Grid.Column="4" FontSize="12" Opacity="0.6" VerticalAlignment="Center"
-                               Text="{Binding CountLabel}" />
-                </Grid>
-            </Border>
-
             <Border Padding="18" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#0A808080"
                     IsVisible="{Binding HasRecords}">

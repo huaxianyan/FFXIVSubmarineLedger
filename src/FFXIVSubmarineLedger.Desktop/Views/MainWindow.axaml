@@ -81,13 +81,46 @@
 
         <Grid Grid.Column="1" RowDefinitions="Auto,*">
             <Border Padding="28,20" BorderBrush="#40808080" BorderThickness="0,0,0,1">
-                <Grid ColumnDefinitions="*,Auto">
+                <Grid ColumnDefinitions="*,Auto,Auto">
                     <StackPanel Spacing="3">
                         <TextBlock Classes="page-title" Text="{Binding PageTitle}" />
                         <TextBlock Opacity="0.65" Text="{Binding PageSubtitle}" />
                     </StackPanel>
 
-                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="12"
+                    <!-- 筛选：收艇记录页与收益统计页都有，样式一致，各绑自己那份条件 -->
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10"
+                                VerticalAlignment="Center" Margin="24,0,24,0"
+                                IsVisible="{Binding IsFilterPage}">
+                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
+                                   Text="{loc:Tr stats.character}" />
+                        <ComboBox FontSize="12" MinWidth="170"
+                                  DataContext="{Binding ActiveFilter}"
+                                  ItemsSource="{Binding CharacterOptions}"
+                                  SelectedItem="{Binding SelectedCharacter}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FilterOption">
+                                    <TextBlock FontSize="12" Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+
+                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
+                                   Text="{loc:Tr stats.submarine}" />
+                        <ComboBox FontSize="12" MinWidth="150"
+                                  DataContext="{Binding ActiveFilter}"
+                                  IsEnabled="{Binding CanFilterBySubmarine}"
+                                  ItemsSource="{Binding SubmarineOptions}"
+                                  SelectedItem="{Binding SelectedSubmarine}"
+                                  ToolTip.Tip="{loc:Tr stats.subFilterHint}">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:FilterOption">
+                                    <TextBlock FontSize="12" Text="{Binding Label}" />
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="12"
                                 VerticalAlignment="Center">
                         <ProgressBar Width="90" IsIndeterminate="True" IsVisible="{Binding IsBusy}" />
                         <Button Command="{Binding RefreshCommand}" Content="{loc:Tr main.refresh}" />

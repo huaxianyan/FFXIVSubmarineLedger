@@ -109,25 +109,8 @@ public sealed class LedgerLayoutTests
 
     private static (Window Window, LedgerPageViewModel Ledger) Show()
     {
-        var character = new Character { Id = Guid.NewGuid(), Name = "Tiina Branford", World = "Titan" };
-        var submarine = new Submarine { Id = Guid.NewGuid(), CharacterId = character.Id, Name = "Blackberry" };
-
-        var record = new LootRecord
-        {
-            Id = Guid.NewGuid(),
-            CharacterId = character.Id,
-            SubmarineId = submarine.Id,
-            Date = new DateOnly(2026, 10, 29),
-            Items =
-            [
-                new LootItem { ItemId = 22507, ItemName = "沈没船の高級首飾り", Quantity = 3, UnitPrice = 34500 },
-            ],
-        };
-
         var ledger = new LedgerPageViewModel(
-            new Records([record]),
-            new Submarines([submarine]),
-            new CharacterService(new Characters([character])),
+            Sample.RecordRepository, Sample.SubmarineRepository, Sample.Characters, () => null,
             new Lazy<ItemCatalog>(() => ItemCatalog.Load()));
 
         ledger.LoadAsync().GetAwaiter().GetResult();
@@ -142,45 +125,5 @@ public sealed class LedgerLayoutTests
         Dispatcher.UIThread.RunJobs();
 
         return (window, ledger);
-    }
-
-    private sealed class Records(List<LootRecord> rows) : ILootRecordRepository
-    {
-        public Task<IReadOnlyList<LootRecord>> ListAsync(
-            DateOnly? from = null, DateOnly? to = null, Guid? characterId = null, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<LootRecord>>(rows);
-
-        public Task<LootRecord?> FindAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult(rows.FirstOrDefault(x => x.Id == id));
-
-        public Task AddAsync(LootRecord record, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    private sealed class Submarines(List<Submarine> rows) : ISubmarineRepository
-    {
-        public Task<IReadOnlyList<Submarine>> ListAsync(Guid? characterId = null, CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Submarine>>(rows);
-
-        public Task<Submarine?> FindByNameAsync(Guid characterId, string name, CancellationToken ct = default) =>
-            Task.FromResult(rows.FirstOrDefault(x => x.CharacterId == characterId && x.Name == name));
-
-        public Task AddAsync(Submarine submarine, CancellationToken ct = default) => Task.CompletedTask;
-    }
-
-    private sealed class Characters(List<Character> rows) : ICharacterRepository
-    {
-        public Task<IReadOnlyList<Character>> ListAsync(CancellationToken ct = default) =>
-            Task.FromResult<IReadOnlyList<Character>>(rows);
-
-        public Task<Character?> FindAsync(Guid id, CancellationToken ct = default) =>
-            Task.FromResult(rows.FirstOrDefault(x => x.Id == id));
-
-        public Task AddAsync(Character character, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task UpdateAsync(Character character, CancellationToken ct = default) => Task.CompletedTask;
-
-        public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
     }
 }

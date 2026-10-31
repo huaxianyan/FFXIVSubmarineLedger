@@ -27,14 +27,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
             composition.Records,
             composition.Submarines,
             composition.Characters,
-            composition.CatalogSource);
-        Statistics = new StatisticsPageViewModel(
-            Ledger,
             topLevelProvider,
             composition.CatalogSource);
-
-        // 明细页筛选一变，统计页跟着重算，两页口径始终一致。
-        Ledger.FilterChanged += (_, _) => Statistics.Load();
+        Statistics = new StatisticsPageViewModel(
+            composition.Records,
+            composition.Submarines,
+            composition.Characters,
+            topLevelProvider,
+            composition.CatalogSource);
         Settings = new SettingsPageViewModel(
             topLevelProvider,
             composition.Backup,
@@ -97,6 +97,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRecordsPage))]
     [NotifyPropertyChangedFor(nameof(IsLedgerPage))]
+    [NotifyPropertyChangedFor(nameof(IsFilterPage))]
+    [NotifyPropertyChangedFor(nameof(ActiveFilter))]
     [NotifyPropertyChangedFor(nameof(IsStatisticsPage))]
     [NotifyPropertyChangedFor(nameof(IsCharactersPage))]
     [NotifyPropertyChangedFor(nameof(IsSettingsPage))]
@@ -113,6 +115,14 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public bool IsRecordsPage => CurrentPage == NavigationPage.Records;
 
     public bool IsLedgerPage => CurrentPage == NavigationPage.Ledger;
+
+    /// <summary>标题栏的筛选只在这两页有意义。</summary>
+    public bool IsFilterPage => CurrentPage is NavigationPage.Ledger or NavigationPage.Statistics;
+
+    /// <summary>当前页那套筛选条件，标题栏绑它。</summary>
+    public RecordFilter ActiveFilter => CurrentPage == NavigationPage.Statistics
+        ? Statistics.Filter
+        : Ledger.Filter;
 
     public bool IsStatisticsPage => CurrentPage == NavigationPage.Statistics;
 
@@ -171,7 +181,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
         {
             await Characters.LoadAsync().ConfigureAwait(true);
             await Ledger.LoadAsync().ConfigureAwait(true);
-            Statistics.Load();
+            await Statistics.LoadAsync().ConfigureAwait(true);
             StatusMessage = Characters.Rows.Count == 0
                 ? Loc.Get("status.noCharacterHint")
                 : Loc.Format("status.loadedCharacters", Characters.Rows.Count);

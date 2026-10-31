@@ -4,9 +4,12 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubmarineLedger.Application.Abstractions;
+using FFXIVSubmarineLedger.Application.Characters;
 using FFXIVSubmarineLedger.Application.Localization;
 using FFXIVSubmarineLedger.Application.Records;
 using FFXIVSubmarineLedger.Domain.Catalog;
+using FFXIVSubmarineLedger.Domain.Characters;
 using FFXIVSubmarineLedger.Domain.Records;
 using FFXIVSubmarineLedger.Infrastructure.Catalog;
 
@@ -19,12 +22,37 @@ namespace FFXIVSubmarineLedger.Desktop.ViewModels;
 /// 明细和筛选都在 <see cref="LedgerPageViewModel" />：两页共用同一份筛选结果，
 /// 不会出现「明细 5 笔、统计算了 7 笔」。
 /// </summary>
-public sealed partial class StatisticsPageViewModel(
-    LedgerPageViewModel ledger,
-    Func<TopLevel?> topLevelProvider,
-    Lazy<ItemCatalog> catalog) : ObservableObject
+public sealed partial class StatisticsPageViewModel : ObservableObject
 {
+    private readonly ILootRecordRepository _records;
+    private readonly ISubmarineRepository _submarines;
+    private readonly CharacterService _characters;
+    private readonly Func<TopLevel?> _topLevelProvider;
+    private readonly Lazy<ItemCatalog> _catalog;
+
+    private IReadOnlyList<LootRecord> _all = [];
     private IReadOnlyList<LootRecord> _filtered = [];
+    private IReadOnlyDictionary<Guid, string> _names = new Dictionary<Guid, string>();
+    private IReadOnlyDictionary<Guid, string> _submarineNames = new Dictionary<Guid, string>();
+
+    public StatisticsPageViewModel(
+        ILootRecordRepository records,
+        ISubmarineRepository submarines,
+        CharacterService characters,
+        Func<TopLevel?> topLevelProvider,
+        Lazy<ItemCatalog> catalog)
+    {
+        _records = records;
+        _submarines = submarines;
+        _characters = characters;
+        _topLevelProvider = topLevelProvider;
+        _catalog = catalog;
+
+        Filter.Changed += (_, _) => ApplyFilter();
+    }
+
+    /// <summary>这一页自己的筛选条件。和收艇记录页同一套样式，各管各的。</summary>
+    public RecordFilter Filter { get; } = new();
 
     public ObservableCollection<ItemShareRowViewModel> Items { get; } = [];
 
@@ -95,24 +123,32 @@ public sealed partial class StatisticsPageViewModel(
         _ = LoadAsync();
     }
 
-    /// <summary>明细页筛好了，这里跟着重算一次汇总。</summary>
+    /// <summary>重算整页汇总。</summary>
     public void Load()
     {
-        Apply(ledger.FilteredRecords);
+        ApplyFilter();
         IsLoaded = true;
     }
 
     /// <summary>刷新数据源后重算。</summary>
     public async Task LoadAsync()
     {
-        await ledger.LoadAsync().ConfigureAwait(true);
+        _all = await _records.ListAsync().ConfigureAwait(true);
+        IReadOnlyList<Character> owners = await _characters.ListAsync(includeInactive: true).ConfigureAwait(true);
+        IReadOnlyList<Submarine> allSubmarines = await _submarines.ListAsync().ConfigureAwait(true);
+
+        _names = owners.ToDictionary(x => x.Id, x => x.DisplayName);
+        _submarineNames = allSubmarines.ToDictionary(x => x.Id, x => x.Name);
+
+        Filter.Reset(owners, _all, id => SubmarineNameOf(id));
         Load();
     }
 
-    private void Apply(IReadOnlyList<LootRecord> filtered)
+    private void ApplyFilter()
     {
-        _filtered = filtered;
-        LootStatisticsSnapshot stats = LootStatistics.Compute(filtered);
+        _filtered = Filter.Apply(_all);
+
+        LootStatisticsSnapshot stats = LootStatistics.Compute(_filtered);
 
         TotalLabel = GilCompact(stats.TotalValue);
         TotalDetailLabel = GilDetail(stats.TotalValue);
@@ -135,11 +171,11 @@ public sealed partial class StatisticsPageViewModel(
 
         Characters.Clear();
         foreach (LootStatisticsCharacter item in stats.ByCharacter)
-            Characters.Add(new CharacterShareRowViewModel(item, ledger.NameOf(item.CharacterId)));
+            Characters.Add(new CharacterShareRowViewModel(item, NameOf(item.CharacterId)));
 
         SubmarineShares.Clear();
         foreach (LootStatisticsSubmarine item in stats.BySubmarine)
-            SubmarineShares.Add(new SubmarineShareRowViewModel(item, ledger.SubmarineNameOf(item.SubmarineId)));
+            SubmarineShares.Add(new SubmarineShareRowViewModel(item, SubmarineNameOf(item.SubmarineId)));
 
         RefreshTrend();
 
@@ -164,7 +200,7 @@ public sealed partial class StatisticsPageViewModel(
     [RelayCommand]
     private async Task ExportCsvAsync()
     {
-        if (topLevelProvider() is not { } topLevel)
+        if (_topLevelProvider() is not { } topLevel)
         {
             StatusMessage = Loc.Get("stats.pickerUnavailable");
             return;
@@ -192,7 +228,7 @@ public sealed partial class StatisticsPageViewModel(
                 return;
 
             string path = file.Path.LocalPath;
-            string csv = LootCsvExporter.ToCsv(_filtered, ledger.CharacterNames);
+            string csv = LootCsvExporter.ToCsv(_filtered, _names);
             await LootCsvExporter.WriteAsync(path, csv).ConfigureAwait(true);
 
             int rows = _filtered.Sum(x => x.Items.Count);
@@ -215,13 +251,20 @@ public sealed partial class StatisticsPageViewModel(
     {
         try
         {
-            return catalog.Value.Find(itemId);
+            return _catalog.Value.Find(itemId);
         }
         catch (Exception exception) when (exception is IOException or InvalidDataException or FileNotFoundException)
         {
             return null;
         }
     }
+
+    private string NameOf(Guid characterId) =>
+        _names.GetValueOrDefault(characterId, Loc.Get("stats.unknownCharacter"));
+
+    private string SubmarineNameOf(Guid? submarineId) => submarineId is { } id
+        ? _submarineNames.GetValueOrDefault(id, Loc.Get("stats.unknownSubmarine"))
+        : Loc.Get("records.subUnmarked");
 
     /// <summary>主显示：带单位的概数。</summary>
     private static string GilCompact(long value) => GilFormat.Compact(value);
