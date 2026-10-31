@@ -5,20 +5,25 @@ using FFXIVSubmarineLedger.Domain.Records;
 
 namespace FFXIVSubmarineLedger.Desktop.ViewModels;
 
-/// <summary>统计页里的一条已入账记录。</summary>
+/// <summary>收艇记录页里的一条明细。</summary>
 public sealed partial class RecordRowViewModel(
     LootRecord model,
     string characterLabel,
-    StatisticsPageViewModel owner,
+    string submarineLabel,
+    LedgerPageViewModel owner,
     Func<uint, string, string> resolveItemName) : ObservableObject
 {
     internal Guid Id => model.Id;
 
     public string DateLabel { get; } = model.Date.ToString("yyyy-MM-dd");
 
+    /// <summary>艇名。一笔收益属于哪艘艇，比属于哪个角色更常用。</summary>
+    public string SubmarineLabel { get; } = submarineLabel;
+
+    /// <summary>角色名 @ 服务器。</summary>
     public string CharacterLabel { get; } = characterLabel;
 
-    /// <summary>主显示：带单位的概数（19 万 Gil）。</summary>
+    /// <summary>主显示：带单位的概数（19.1 万 Gil）。</summary>
     public string TotalLabel { get; } = GilFormat.Compact(model.TotalValue);
 
     /// <summary>副行：精确值（190,177 Gil）。</summary>

@@ -170,37 +170,6 @@
                 </StackPanel>
             </Border>
 
-            <Border Padding="18" CornerRadius="10" BorderThickness="1"
-                    BorderBrush="#40808080" Background="#0A808080"
-                    IsVisible="{Binding HasRecords}">
-                <StackPanel Spacing="12">
-                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr stats.records}" />
-
-                    <ItemsControl ItemsSource="{Binding Records}">
-                        <ItemsControl.ItemTemplate>
-                            <DataTemplate x:DataType="vm:RecordRowViewModel">
-                                <Grid Margin="0,6" ColumnDefinitions="100,120,*,120,Auto" ColumnSpacing="12">
-                                    <TextBlock FontSize="12" VerticalAlignment="Center" Text="{Binding DateLabel}" />
-                                    <TextBlock Grid.Column="1" FontSize="12" Opacity="0.75" VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" Text="{Binding CharacterLabel}" />
-                                    <TextBlock Grid.Column="2" FontSize="12" Opacity="0.6" VerticalAlignment="Center"
-                                               TextTrimming="CharacterEllipsis" Text="{Binding DetailLabel}" />
-<StackPanel Grid.Column="3" HorizontalAlignment="Right" VerticalAlignment="Center">
-                                        <TextBlock FontSize="12" FontWeight="SemiBold" HorizontalAlignment="Right"
-                                                   Text="{Binding TotalLabel}" />
-                                        <TextBlock FontSize="10" Opacity="0.45" HorizontalAlignment="Right"
-                                                   IsVisible="{Binding HasDetailTotal}"
-                                                   Text="{Binding DetailTotalLabel}" />
-                                    </StackPanel>
-                                    <Button Grid.Column="4" FontSize="11" Content="{loc:Tr stats.delete}"
-                                            Command="{Binding DeleteCommand}" />
-                                </Grid>
-                            </DataTemplate>
-                        </ItemsControl.ItemTemplate>
-                    </ItemsControl>
-                </StackPanel>
-            </Border>
-
             <Border Padding="14" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#07808080"
                     IsVisible="{Binding HasStatus}">
@@ -211,7 +180,7 @@
                     BorderBrush="#40808080" Background="#07808080"
                     IsVisible="{Binding IsEmpty}">
                 <TextBlock FontSize="13" Opacity="0.7" TextWrapping="Wrap"
-                           Text="{loc:Tr stats.empty}" />
+                           Text="{loc:Tr stats.noData}" />
             </Border>
         </StackPanel>
     </ScrollViewer>

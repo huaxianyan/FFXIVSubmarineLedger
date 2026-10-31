@@ -4,6 +4,7 @@
   "app.title": "FFXIV Submarine Ledger",
   "app.brand": "FFXIV Submarine Ledger",
   "nav.records": "收艇记账",
+  "nav.ledger": "收艇记录",
   "nav.statistics": "收益统计",
   "nav.characters": "角色管理",
   "nav.settings": "设置",
@@ -11,6 +12,7 @@
   "main.refresh": "刷新",
   "main.footer": "识别与记账都在本机完成，不联网、不上传截图。",
   "page.records.subtitle": "截图识别收艇掉落，计价入账。",
+  "page.ledger.subtitle": "每一笔收艇的明细，逐条核对、删除。",
   "page.statistics.subtitle": "按日、月、年查看收益走势。",
   "page.characters.subtitle": "管理收益归属的角色。",
   "page.settings.subtitle": "数据目录、识别参数与关于。",
@@ -125,9 +127,6 @@
   "stats.characterShare": "角色占比",
   "stats.submarineShare": "按艇占比",
   "stats.itemShare": "道具占比",
-  "stats.records": "已入账记录",
-  "stats.delete": "删除",
-  "stats.empty": "还没有记录。到「收艇记账」页识别一次，确认后就会出现在这里。",
   "stats.noRecords": "还没有记录",
   "stats.span": "{0} 起 {1} 天 · {2} 次收艇",
   "stats.itemCount": "{0} 种道具",
@@ -205,5 +204,9 @@
   "settings.updateFailedBadResponse": "GitHub 的响应读不懂，稍后再试。",
   "app.tagline": "潜艇收益统计",
   "money.tenThousand": "万",
-  "money.hundredMillion": "亿"
+  "money.hundredMillion": "亿",
+  "ledger.empty": "还没有记录。在「收艇记账」页识别一次，确认后就会出现在这里。",
+  "ledger.count": "共 {0} 笔",
+  "stats.noData": "还没有记录。先在「收艇记账」页识别一次，确认入账后这里才有统计。",
+  "ledger.delete": "删除"
 }

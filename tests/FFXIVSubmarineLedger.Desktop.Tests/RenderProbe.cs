@@ -24,30 +24,40 @@ namespace FFXIVSubmarineLedger.Desktop.Tests;
 public sealed class RenderProbe
 {
     [AvaloniaFact]
-    public async Task RenderStatisticsPage()
+    public async Task RenderPages()
     {
         string? output = Environment.GetEnvironmentVariable("PROBE_OUT");
         if (string.IsNullOrWhiteSpace(output))
             return;
 
-        StatisticsPageViewModel viewModel = BuildViewModel();
-        await viewModel.LoadAsync();
+        LedgerPageViewModel ledger = BuildLedger();
+        await ledger.LoadAsync();
 
-        var view = new Views.StatisticsPageView { DataContext = viewModel };
-        var window = new Window { Content = view, Width = 1200, Height = 1500 };
+        StatisticsPageViewModel statistics = new(ledger, () => null, new Lazy<ItemCatalog>(() => ItemCatalog.Load()));
+        statistics.Load();
+
+        // 两个页面各出一张，同一份数据：明细看排版，统计看汇总。
+        Render(new Views.LedgerPageView { DataContext = ledger }, 1200, 900,
+            Path.Combine(Path.GetDirectoryName(output)!, "probe-ledger.png"));
+        Render(new Views.StatisticsPageView { DataContext = statistics }, 1200, 1500, output);
+    }
+
+    private static void Render(Control view, int width, int height, string path)
+    {
+        var window = new Window { Content = view, Width = width, Height = height };
         window.Show();
         Dispatcher.UIThread.RunJobs();
 
         var frame = window.CaptureRenderedFrame();
         Assert.NotNull(frame);
 
-        using (var stream = File.Create(output))
+        using (var stream = File.Create(path))
             frame.Save(stream, new PngBitmapEncoderOptions());
 
         window.Close();
     }
 
-    private static StatisticsPageViewModel BuildViewModel()
+    private static LedgerPageViewModel BuildLedger()
     {
         var character = new Character { Id = Guid.NewGuid(), Name = "Tiina Branford", World = "Titan", IsDefault = true };
         var submarine = new Submarine { Id = Guid.NewGuid(), CharacterId = character.Id, Name = "Blackberry" };
@@ -71,11 +81,10 @@ public sealed class RenderProbe
             });
         }
 
-        return new StatisticsPageViewModel(
+        return new LedgerPageViewModel(
             new FakeRecords(records),
             new FakeSubmarines([submarine]),
             new CharacterService(new FakeCharacters([character])),
-            () => null,
             new Lazy<ItemCatalog>(() => ItemCatalog.Load()));
     }
 

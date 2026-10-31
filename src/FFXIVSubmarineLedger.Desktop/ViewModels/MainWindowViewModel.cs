@@ -23,12 +23,18 @@ public sealed partial class MainWindowViewModel : ObservableObject
             composition.Records,
             composition.Submarines,
             composition.CatalogSource);
-        Statistics = new StatisticsPageViewModel(
+        Ledger = new LedgerPageViewModel(
             composition.Records,
             composition.Submarines,
             composition.Characters,
+            composition.CatalogSource);
+        Statistics = new StatisticsPageViewModel(
+            Ledger,
             topLevelProvider,
             composition.CatalogSource);
+
+        // 明细页筛选一变，统计页跟着重算，两页口径始终一致。
+        Ledger.FilterChanged += (_, _) => Statistics.Load();
         Settings = new SettingsPageViewModel(
             topLevelProvider,
             composition.Backup,
@@ -49,8 +55,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Records.Relocalize();
             Characters.Relocalize();
             Settings.Relocalize();
+            Ledger.Relocalize();
             Statistics.Relocalize();
-            _ = Statistics.LoadAsync();
 
             StatusMessage = Characters.Rows.Count == 0
                 ? Loc.Get("status.noCharacterHint")
@@ -61,6 +67,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public CharacterManagerViewModel Characters { get; }
 
     public RecordsPageViewModel Records { get; }
+
+    public LedgerPageViewModel Ledger { get; }
 
     public StatisticsPageViewModel Statistics { get; }
 
@@ -88,6 +96,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsRecordsPage))]
+    [NotifyPropertyChangedFor(nameof(IsLedgerPage))]
     [NotifyPropertyChangedFor(nameof(IsStatisticsPage))]
     [NotifyPropertyChangedFor(nameof(IsCharactersPage))]
     [NotifyPropertyChangedFor(nameof(IsSettingsPage))]
@@ -103,6 +112,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     public bool IsRecordsPage => CurrentPage == NavigationPage.Records;
 
+    public bool IsLedgerPage => CurrentPage == NavigationPage.Ledger;
+
     public bool IsStatisticsPage => CurrentPage == NavigationPage.Statistics;
 
     public bool IsCharactersPage => CurrentPage == NavigationPage.Characters;
@@ -112,6 +123,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string PageTitle => CurrentPage switch
     {
         NavigationPage.Records => Loc.Get("nav.records"),
+        NavigationPage.Ledger => Loc.Get("nav.ledger"),
         NavigationPage.Statistics => Loc.Get("nav.statistics"),
         NavigationPage.Characters => Loc.Get("nav.characters"),
         NavigationPage.Settings => Loc.Get("nav.settings"),
@@ -121,6 +133,7 @@ public sealed partial class MainWindowViewModel : ObservableObject
     public string PageSubtitle => CurrentPage switch
     {
         NavigationPage.Records => Loc.Get("page.records.subtitle"),
+        NavigationPage.Ledger => Loc.Get("page.ledger.subtitle"),
         NavigationPage.Statistics => Loc.Get("page.statistics.subtitle"),
         NavigationPage.Characters => Loc.Get("page.characters.subtitle"),
         NavigationPage.Settings => Loc.Get("page.settings.subtitle"),
@@ -129,6 +142,13 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
     [RelayCommand]
     private void ShowRecords() => CurrentPage = NavigationPage.Records;
+
+    [RelayCommand]
+    private void ShowLedger()
+    {
+        CurrentPage = NavigationPage.Ledger;
+        _ = Ledger.LoadAsync();
+    }
 
     [RelayCommand]
     private void ShowStatistics()
@@ -150,7 +170,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
         try
         {
             await Characters.LoadAsync().ConfigureAwait(true);
-            await Statistics.LoadAsync().ConfigureAwait(true);
+            await Ledger.LoadAsync().ConfigureAwait(true);
+            Statistics.Load();
             StatusMessage = Characters.Rows.Count == 0
                 ? Loc.Get("status.noCharacterHint")
                 : Loc.Format("status.loadedCharacters", Characters.Rows.Count);
@@ -161,9 +182,5 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public Task InitializeAsync()
-    {
-        _ = Statistics.LoadAsync();
-        return RefreshAsync();
-    }
+    public Task InitializeAsync() => RefreshAsync();
 }

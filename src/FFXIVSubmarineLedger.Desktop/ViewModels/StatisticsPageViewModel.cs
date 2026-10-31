@@ -4,12 +4,9 @@ using Avalonia.Controls;
 using Avalonia.Platform.Storage;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
-using FFXIVSubmarineLedger.Application.Abstractions;
-using FFXIVSubmarineLedger.Application.Characters;
 using FFXIVSubmarineLedger.Application.Localization;
 using FFXIVSubmarineLedger.Application.Records;
 using FFXIVSubmarineLedger.Domain.Catalog;
-using FFXIVSubmarineLedger.Domain.Characters;
 using FFXIVSubmarineLedger.Domain.Records;
 using FFXIVSubmarineLedger.Infrastructure.Catalog;
 
@@ -18,17 +15,15 @@ namespace FFXIVSubmarineLedger.Desktop.ViewModels;
 /// <summary>
 /// 收益统计页。口径全在 <see cref="LootStatistics"/> 与 <see cref="LootTrend"/> 里，
 /// 这一层只负责把数摆到界面上。
+///
+/// 明细和筛选都在 <see cref="LedgerPageViewModel" />：两页共用同一份筛选结果，
+/// 不会出现「明细 5 笔、统计算了 7 笔」。
 /// </summary>
 public sealed partial class StatisticsPageViewModel(
-    ILootRecordRepository records,
-    ISubmarineRepository submarines,
-    CharacterService characters,
+    LedgerPageViewModel ledger,
     Func<TopLevel?> topLevelProvider,
     Lazy<ItemCatalog> catalog) : ObservableObject
 {
-    private IReadOnlyList<LootRecord> _all = [];
-    private IReadOnlyDictionary<Guid, string> _names = new Dictionary<Guid, string>();
-    private IReadOnlyDictionary<Guid, string> _submarineNames = new Dictionary<Guid, string>();
     private IReadOnlyList<LootRecord> _filtered = [];
 
     public ObservableCollection<ItemShareRowViewModel> Items { get; } = [];
@@ -36,24 +31,6 @@ public sealed partial class StatisticsPageViewModel(
     public ObservableCollection<CharacterShareRowViewModel> Characters { get; } = [];
 
     public ObservableCollection<SubmarineShareRowViewModel> SubmarineShares { get; } = [];
-
-    /// <summary>角色筛选下拉。第一项固定是「全部角色」。</summary>
-    public ObservableCollection<FilterOption> CharacterOptions { get; } = [];
-
-    /// <summary>艇筛选下拉。必须先选角色才会填内容。</summary>
-    public ObservableCollection<FilterOption> SubmarineOptions { get; } = [];
-
-    [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanFilterBySubmarine))]
-    private FilterOption? _selectedCharacter;
-
-    [ObservableProperty]
-    private FilterOption? _selectedSubmarine;
-
-    /// <summary>艇名在角色范围内才唯一，所以没选角色时不给筛艇。</summary>
-    public bool CanFilterBySubmarine => SelectedCharacter?.Id is not null;
-
-    public ObservableCollection<RecordRowViewModel> Records { get; } = [];
 
     [ObservableProperty]
     private string _totalLabel = "0";
@@ -101,68 +78,39 @@ public sealed partial class StatisticsPageViewModel(
 
     public string TrendTitle => IsMonthly ? Loc.Get("stats.trendMonth") : Loc.Get("stats.trendDay");
 
-    /// <summary>换语言后重算页内文字。筛选下拉与统计值在 <see cref="LoadAsync"/> 里重建。</summary>
+    public bool HasStatus => StatusMessage.Length > 0;
+
+    public bool HasRecords => _filtered.Count > 0;
+
+    public bool IsEmpty => IsLoaded && _filtered.Count == 0;
+
+    /// <summary>每日收益走势。</summary>
+    [ObservableProperty]
+    private TrendSeries? _trend;
+
+    /// <summary>换语言后重算页内文字。</summary>
     public void Relocalize()
     {
         OnPropertyChanged(nameof(TrendTitle));
         _ = LoadAsync();
     }
 
-    public bool HasStatus => StatusMessage.Length > 0;
-
-    public bool HasRecords => Records.Count > 0;
-
-    public bool IsEmpty => IsLoaded && Records.Count == 0;
-
-    /// <summary>每日收益走势。</summary>
-    [ObservableProperty]
-    private TrendSeries? _trend;
-
-    partial void OnSelectedCharacterChanged(FilterOption? value)
+    /// <summary>明细页筛好了，这里跟着重算一次汇总。</summary>
+    public void Load()
     {
-        RebuildSubmarineOptions();
-        ApplyFilter();
-    }
-
-    partial void OnSelectedSubmarineChanged(FilterOption? value) => ApplyFilter();
-
-    public async Task LoadAsync()
-    {
-        _all = await records.ListAsync().ConfigureAwait(true);
-        IReadOnlyList<Character> owners = await characters.ListAsync(includeInactive: true).ConfigureAwait(true);
-        IReadOnlyList<Submarine> allSubmarines = await submarines.ListAsync().ConfigureAwait(true);
-
-        _names = owners.ToDictionary(x => x.Id, x => x.DisplayName);
-        _submarineNames = allSubmarines.ToDictionary(x => x.Id, x => x.Name);
-
-        CharacterOptions.Clear();
-        CharacterOptions.Add(new FilterOption(null, Loc.Get("stats.allCharacters")));
-        foreach (Character owner in owners)
-            CharacterOptions.Add(new FilterOption(owner.Id, owner.DisplayName));
-
-        // 保持用户当前的选择；换成另一个人时艇筛选要重置。
-        FilterOption? previous = SelectedCharacter;
-        SelectedCharacter = previous?.Id is { } id && CharacterOptions.Any(x => x.Id == id)
-            ? CharacterOptions.First(x => x.Id == id)
-            : CharacterOptions[0];
-
-        RebuildSubmarineOptions();
-        ApplyFilter();
-
+        Apply(ledger.FilteredRecords);
         IsLoaded = true;
     }
 
-    /// <summary>按当前的筛选条件重算整页。</summary>
-    private void ApplyFilter()
+    /// <summary>刷新数据源后重算。</summary>
+    public async Task LoadAsync()
     {
-        IReadOnlyList<LootRecord> filtered = _all;
+        await ledger.LoadAsync().ConfigureAwait(true);
+        Load();
+    }
 
-        if (SelectedCharacter?.Id is { } characterId)
-            filtered = [.. filtered.Where(x => x.CharacterId == characterId)];
-
-        if (SelectedSubmarine?.Id is { } submarineId)
-            filtered = [.. filtered.Where(x => x.SubmarineId == submarineId)];
-
+    private void Apply(IReadOnlyList<LootRecord> filtered)
+    {
         _filtered = filtered;
         LootStatisticsSnapshot stats = LootStatistics.Compute(filtered);
 
@@ -187,53 +135,16 @@ public sealed partial class StatisticsPageViewModel(
 
         Characters.Clear();
         foreach (LootStatisticsCharacter item in stats.ByCharacter)
-            Characters.Add(new CharacterShareRowViewModel(item, NameOf(item.CharacterId)));
+            Characters.Add(new CharacterShareRowViewModel(item, ledger.NameOf(item.CharacterId)));
 
         SubmarineShares.Clear();
         foreach (LootStatisticsSubmarine item in stats.BySubmarine)
-            SubmarineShares.Add(new SubmarineShareRowViewModel(item, SubmarineNameOf(item.SubmarineId)));
-
-        Records.Clear();
-        foreach (LootRecord record in filtered)
-            Records.Add(new RecordRowViewModel(record, NameOf(record.CharacterId), this, ResolveItemName));
+            SubmarineShares.Add(new SubmarineShareRowViewModel(item, ledger.SubmarineNameOf(item.SubmarineId)));
 
         RefreshTrend();
 
         OnPropertyChanged(nameof(HasRecords));
-    }
-
-    private void RebuildSubmarineOptions()
-    {
-        SubmarineOptions.Clear();
-        SubmarineOptions.Add(new FilterOption(null, Loc.Get("stats.allSubmarines")));
-
-        if (SelectedCharacter?.Id is not { } characterId)
-        {
-            SelectedSubmarine = SubmarineOptions[0];
-            return;
-        }
-
-        // 艇的可选项取自这个角色实际有记录的艇：没有记录的艇拿来筛也没意义。
-        IEnumerable<Guid> submarineIds = _all
-            .Where(x => x.CharacterId == characterId && x.SubmarineId is not null)
-            .Select(x => x.SubmarineId!.Value)
-            .Distinct()
-            .OrderBy(id => SubmarineNameOf(id), StringComparer.Ordinal)
-            .Select(id => id);
-
-        foreach (Guid submarineId in submarineIds)
-            SubmarineOptions.Add(new FilterOption(submarineId, SubmarineNameOf(submarineId)));
-
-        FilterOption? previous = SelectedSubmarine;
-        SelectedSubmarine = previous?.Id is { } id && SubmarineOptions.Any(x => x.Id == id)
-            ? SubmarineOptions.First(x => x.Id == id)
-            : SubmarineOptions[0];
-    }
-
-    internal async Task DeleteAsync(RecordRowViewModel row)
-    {
-        await records.DeleteAsync(row.Id).ConfigureAwait(true);
-        await LoadAsync().ConfigureAwait(true);
+        OnPropertyChanged(nameof(IsEmpty));
     }
 
     [RelayCommand]
@@ -281,7 +192,7 @@ public sealed partial class StatisticsPageViewModel(
                 return;
 
             string path = file.Path.LocalPath;
-            string csv = LootCsvExporter.ToCsv(_filtered, _names);
+            string csv = LootCsvExporter.ToCsv(_filtered, ledger.CharacterNames);
             await LootCsvExporter.WriteAsync(path, csv).ConfigureAwait(true);
 
             int rows = _filtered.Sum(x => x.Items.Count);
@@ -295,8 +206,6 @@ public sealed partial class StatisticsPageViewModel(
 
     private void RefreshTrend() =>
         Trend = LootTrend.Compute(_filtered, IsMonthly ? TrendGranularity.Month : TrendGranularity.Day);
-
-    private string NameOf(Guid characterId) => _names.GetValueOrDefault(characterId, Loc.Get("stats.unknownCharacter"));
 
     /// <summary>落库记的是日志语言的名字；显示时按 ItemId 换成界面语言。</summary>
     private string ResolveItemName(uint itemId, string fallback) =>
@@ -313,10 +222,6 @@ public sealed partial class StatisticsPageViewModel(
             return null;
         }
     }
-
-    private string SubmarineNameOf(Guid? submarineId) => submarineId is { } id
-        ? _submarineNames.GetValueOrDefault(id, Loc.Get("stats.unknownSubmarine"))
-        : Loc.Get("records.subUnmarked");
 
     /// <summary>主显示：带单位的概数。</summary>
     private static string GilCompact(long value) => GilFormat.Compact(value);

@@ -4,6 +4,7 @@
   "app.title": "FFXIV Submarine Ledger",
   "app.brand": "FFXIV Submarine Ledger",
   "nav.records": "収集記録",
+  "nav.ledger": "収艇記録",
   "nav.statistics": "収益統計",
   "nav.characters": "キャラクター管理",
   "nav.settings": "設定",
@@ -11,6 +12,7 @@
   "main.refresh": "更新",
   "main.footer": "認識と記帳はすべてこの端末内で完結します。通信も画像の送信も行いません。",
   "page.records.subtitle": "スクリーンショットから収集結果を読み取り、金額を記録します。",
+  "page.ledger.subtitle": "収艇ごとの明細。1 件ずつ確認・削除できます。",
   "page.statistics.subtitle": "日・月・年ごとの収益推移を確認します。",
   "page.characters.subtitle": "収益の帰属先となるキャラクターを管理します。",
   "page.settings.subtitle": "データ保存先、認識設定、このアプリについて。",
@@ -125,9 +127,6 @@
   "stats.characterShare": "キャラクター別",
   "stats.submarineShare": "潜水艦別",
   "stats.itemShare": "品目別",
-  "stats.records": "記録済みの一覧",
-  "stats.delete": "削除",
-  "stats.empty": "まだ記録がありません。「収集記録」で読み取り、確認するとここに表示されます。",
   "stats.noRecords": "まだ記録がありません",
   "stats.span": "{0} から {1} 日 · {2} 回",
   "stats.itemCount": "{0} 種類",
@@ -205,5 +204,9 @@
   "settings.updateFailedBadResponse": "GitHub の応答を解釈できません。しばらくしてから再試行してください。",
   "app.tagline": "潜水艦収益集計",
   "money.tenThousand": "万",
-  "money.hundredMillion": "億"
+  "money.hundredMillion": "億",
+  "ledger.empty": "まだ記録がありません。「収艇記帳」で一度読み取って確定すると、ここに並びます。",
+  "ledger.count": "全 {0} 件",
+  "stats.noData": "まだ記録がありません。まず「収艇記帳」で一度読み取って確定すると、ここに集計が出ます。",
+  "ledger.delete": "削除"
 }
