@@ -486,8 +486,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// 把新读到的聊天行并进本次账。
     ///
     /// 读取器每次调用都会把整段累计历史再给一遍（实测第二轮与首轮同为 624 行），
-    /// 所以必须去重；去重按「同一句话的出现次数」算，因为同一种道具分两行入包时
-    /// 日志里就是两条一模一样的行，第二条也是真收益。
+    /// 所以必须去重；去重键是「艇名 + 原始行」（`LootAccumulator`），不能按「同一句话
+    /// 出现过几次」算——同名道具分属两艘艇时会被并成一条。
     /// </summary>
     private IReadOnlyList<RecognizedLoot> MergeChatLines(IReadOnlyList<string> lines)
     {
