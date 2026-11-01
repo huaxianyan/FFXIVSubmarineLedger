@@ -20,7 +20,7 @@ public sealed class UpdateCheckerTests
     {
         UpdateChecker checker = Checker(HttpStatusCode.OK, ReleaseJson);
 
-        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, null);
+        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, ProxyProtocol.Http, null, 0);
 
         Assert.Equal(UpdateStatus.Available, result.Status);
         Assert.Equal("0.2.0", result.Release!.Version);
@@ -32,7 +32,7 @@ public sealed class UpdateCheckerTests
     {
         UpdateChecker checker = Checker(HttpStatusCode.OK, ReleaseJson);
 
-        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 2, 0), ProxyMode.System, null);
+        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 2, 0), ProxyMode.System, ProxyProtocol.Http, null, 0);
 
         Assert.Equal(UpdateStatus.UpToDate, result.Status);
         Assert.Null(result.Release);
@@ -43,7 +43,7 @@ public sealed class UpdateCheckerTests
     {
         UpdateChecker checker = Checker(HttpStatusCode.Forbidden, """{"message":"rate limited"}""");
 
-        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, null);
+        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, ProxyProtocol.Http, null, 0);
 
         Assert.Equal(UpdateStatus.Failed, result.Status);
         Assert.Equal(UpdateFailure.HttpStatus, result.Failure);
@@ -55,9 +55,9 @@ public sealed class UpdateCheckerTests
     {
         UpdateChecker checker = new(
             "huaxianyan/FFXIVSubmarineLedger",
-            (_, _) => new HttpClient(new StubHandler(static _ => throw new HttpRequestException("连不上"))));
+            (_, _, _, _) => new HttpClient(new StubHandler(static _ => throw new HttpRequestException("连不上"))));
 
-        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.Custom, "http://127.0.0.1:7890");
+        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.Custom, ProxyProtocol.Http, "127.0.0.1", 7890);
 
         Assert.Equal(UpdateStatus.Failed, result.Status);
         Assert.Equal(UpdateFailure.Network, result.Failure);
@@ -70,7 +70,7 @@ public sealed class UpdateCheckerTests
         // 仓库还没发过正式版时 GitHub 回 404：对用户来说就是「没有新版本」。
         UpdateChecker checker = Checker(HttpStatusCode.NotFound, """{"message":"Not Found"}""");
 
-        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, null);
+        UpdateCheckResult result = await checker.CheckAsync(new Version(0, 1, 0), ProxyMode.System, ProxyProtocol.Http, null, 0);
 
         Assert.Equal(UpdateStatus.UpToDate, result.Status);
     }
@@ -86,7 +86,7 @@ public sealed class UpdateCheckerTests
 
     private static UpdateChecker Checker(HttpStatusCode status, string body) => new(
         "huaxianyan/FFXIVSubmarineLedger",
-        (_, _) => new HttpClient(new StubHandler(_ => new HttpResponseMessage(status)
+        (_, _, _, _) => new HttpClient(new StubHandler(_ => new HttpResponseMessage(status)
         {
             Content = new StringContent(body),
         })));

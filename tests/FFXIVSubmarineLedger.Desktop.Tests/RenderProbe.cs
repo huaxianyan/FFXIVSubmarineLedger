@@ -40,6 +40,12 @@ public sealed class RenderProbe
         await statistics.LoadAsync();
         Render(new Views.StatisticsPageView { DataContext = statistics }, 1200, 1400,
             Path.Combine(directory, $"{stem}-statistics.png"));
+
+        // 设置页的代理表单：看协议、地址、端口是不是分开摆的。
+        SettingsPageViewModel settings = SettingsForm.Build();
+        settings.SelectedProxy = settings.ProxyOptions.First(x => x.Mode == Domain.Settings.ProxyMode.Custom);
+        Render(new Views.SettingsPageView { DataContext = settings }, 1100, 950,
+            Path.Combine(directory, $"{stem}-settings.png"));
     }
 
     private static void Render(Control view, int width, int height, string path)

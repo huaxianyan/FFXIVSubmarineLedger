@@ -21,8 +21,14 @@ public sealed class AppSettings
     /// <summary>更新检查的出网方式。</summary>
     public ProxyMode ProxyMode { get; set; } = ProxyMode.System;
 
-    /// <summary><see cref="ProxyMode.Custom" /> 时用的代理地址，如 <c>http://127.0.0.1:7890</c>。</summary>
-    public string ProxyUrl { get; set; } = string.Empty;
+    /// <summary><see cref="ProxyMode.Custom" /> 时用的协议、主机与端口，分开存，界面上也是分开填。</summary>
+    public ProxyProtocol ProxyProtocol { get; set; } = ProxyProtocol.Http;
+
+    /// <summary>代理主机，如 <c>127.0.0.1</c>。不带协议、不带端口。</summary>
+    public string ProxyHost { get; set; } = string.Empty;
+
+    /// <summary>代理端口，如 <c>7890</c>。</summary>
+    public int ProxyPort { get; set; }
 
     /// <summary>格子边长小于该像素值时，数量交给用户手输，不做自动识别。</summary>
     public int MinCellSizeForQuantityOcr { get; set; } = 40;

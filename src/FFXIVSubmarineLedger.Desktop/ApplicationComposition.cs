@@ -36,7 +36,8 @@ public sealed class ApplicationComposition
         Updates = new UpdateService(
             new UpdateChecker(
                 RepositorySlug,
-                (mode, url) => new HttpClient(ProxySelector.CreateHandler(mode, url))),
+                (mode, protocol, host, port) =>
+                    new HttpClient(ProxySelector.CreateHandler(mode, protocol, host, port))),
             Settings,
             currentVersion);
 

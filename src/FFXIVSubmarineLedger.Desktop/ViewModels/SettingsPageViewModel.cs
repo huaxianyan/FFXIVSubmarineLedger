@@ -30,6 +30,9 @@ public sealed partial class SettingsPageViewModel(
     /// <summary>代理三种模式的选项。文字随语言变，换语言时重建。</summary>
     public IReadOnlyList<ProxyOption> ProxyOptions { get; private set; } = BuildProxyOptions();
 
+    /// <summary>自定义代理的协议选项。</summary>
+    public IReadOnlyList<ProtocolOption> ProtocolOptions { get; private set; } = BuildProtocolOptions();
+
     public string CurrentVersionLabel => Loc.Format("settings.currentVersion", AppVersion.Describe(updates.Current));
 
     /// <summary>启动时是否自动检查更新。</summary>
@@ -40,7 +43,14 @@ public sealed partial class SettingsPageViewModel(
     private ProxyOption? _selectedProxy;
 
     [ObservableProperty]
-    private string _proxyUrl = string.Empty;
+    private ProtocolOption? _selectedProtocol;
+
+    [ObservableProperty]
+    private string _proxyHost = string.Empty;
+
+    /// <summary>端口用字符串接：输入框里删空的时候不能变成 0。</summary>
+    [ObservableProperty]
+    private string _proxyPort = string.Empty;
 
     /// <summary>上次检查的结果，直接就是给人看的句子。</summary>
     [ObservableProperty]
@@ -55,8 +65,8 @@ public sealed partial class SettingsPageViewModel(
 
     private ReleaseInfo? _release;
 
-    /// <summary>只有自定义模式才需要填地址。</summary>
-    public bool CanEditProxyUrl => SelectedProxy?.Mode == ProxyMode.Custom;
+    /// <summary>只有自定义模式才需要填协议、地址与端口。</summary>
+    public bool CanEditProxy => SelectedProxy?.Mode == ProxyMode.Custom;
 
     /// <summary>装载设置时不要回写，否则一进页面就写一遍库。</summary>
     private bool _loadingUpdateOptions;
@@ -67,14 +77,27 @@ public sealed partial class SettingsPageViewModel(
             SaveUpdateOptions();
     }
 
-    partial void OnProxyUrlChanged(string value) => OnPropertyChanged(nameof(CanEditProxyUrl));
-
     partial void OnSelectedProxyChanged(ProxyOption? value)
     {
-        OnPropertyChanged(nameof(CanEditProxyUrl));
+        OnPropertyChanged(nameof(CanEditProxy));
 
         if (!_loadingUpdateOptions)
             SaveUpdateOptions();
+    }
+
+    /// <summary>换协议时，把端口补成这个协议的默认值——用户不用自己去查该填哪个。</summary>
+    partial void OnSelectedProtocolChanged(ProtocolOption? value)
+    {
+        if (_loadingUpdateOptions || value is null)
+            return;
+
+        int current = ParsedPort();
+
+        // 只在端口空着、或者还是别的协议的默认值时替换，不覆盖用户自己填的数。
+        if (current == 0 || IsDefaultPortOfAnotherProtocol(current))
+            ProxyPort = ProxySelector.DefaultPort(value.Protocol).ToString(CultureInfo.InvariantCulture);
+
+        SaveUpdateOptions();
     }
 
     /// <summary>页面显示时把设置读进来。</summary>
@@ -85,6 +108,8 @@ public sealed partial class SettingsPageViewModel(
 
         ProxyOptions = BuildProxyOptions();
         OnPropertyChanged(nameof(ProxyOptions));
+        ProtocolOptions = BuildProtocolOptions();
+        OnPropertyChanged(nameof(ProtocolOptions));
 
         // 设置已经缓存过，这里是本地 SQLite 读，可以同步等。
         AppSettings current = settings.GetAsync().GetAwaiter().GetResult();
@@ -93,7 +118,13 @@ public sealed partial class SettingsPageViewModel(
         try
         {
             CheckForUpdates = current.CheckForUpdates;
-            ProxyUrl = current.ProxyUrl;
+            ProtocolOptions = BuildProtocolOptions();
+            SelectedProtocol = ProtocolOptions.FirstOrDefault(x => x.Protocol == current.ProxyProtocol)
+                               ?? ProtocolOptions[0];
+            ProxyHost = current.ProxyHost;
+            ProxyPort = current.ProxyPort > 0
+                ? current.ProxyPort.ToString(CultureInfo.InvariantCulture)
+                : string.Empty;
             SelectedProxy = ProxyOptions.FirstOrDefault(x => x.Mode == current.ProxyMode) ?? ProxyOptions[0];
         }
         finally
@@ -101,26 +132,48 @@ public sealed partial class SettingsPageViewModel(
             _loadingUpdateOptions = false;
         }
 
-        OnPropertyChanged(nameof(CanEditProxyUrl));
+        OnPropertyChanged(nameof(CanEditProxy));
 
         if (updates.Last is { } last)
             ShowResult(last);
     }
 
-    /// <summary>保存更新与代理设置。地址框在失焦时调用，避免每敲一个字就写库。</summary>
+    /// <summary>保存更新与代理设置。输入框在失焦时调用，避免每敲一个字就写库。</summary>
     public void SaveUpdateOptions()
     {
         if (SelectedProxy is null)
             return;
 
-        if (SelectedProxy.Mode == ProxyMode.Custom && !ProxySelector.TryParse(ProxyUrl, out _))
+        int port = ParsedPort();
+
+        if (SelectedProxy.Mode == ProxyMode.Custom)
         {
-            StatusMessage = Loc.Get("settings.proxyInvalid");
-            return;
+            string? problem = ProxySelector.Validate(
+                SelectedProtocol?.Protocol ?? ProxyProtocol.Http, ProxyHost, port);
+
+            if (problem is not null)
+            {
+                StatusMessage = Loc.Get(problem);
+                return;
+            }
         }
 
-        _ = settings.SetUpdateOptionsAsync(CheckForUpdates, SelectedProxy.Mode, ProxyUrl);
+        StatusMessage = string.Empty;
+        _ = settings.SetUpdateOptionsAsync(
+            CheckForUpdates,
+            SelectedProxy.Mode,
+            SelectedProtocol?.Protocol ?? ProxyProtocol.Http,
+            ProxyHost,
+            port);
     }
+
+    /// <summary>端口栏填的字符串转成数字，填了非数字或空着都算 0。</summary>
+    private int ParsedPort() =>
+        int.TryParse(ProxyPort, NumberStyles.Integer, CultureInfo.InvariantCulture, out int port) ? port : 0;
+
+    /// <summary>这个端口是不是别的协议的默认值——是的话就该跟着协议一起换掉。</summary>
+    private static bool IsDefaultPortOfAnotherProtocol(int port) =>
+        Enum.GetValues<ProxyProtocol>().Any(x => ProxySelector.DefaultPort(x) == port);
 
     [RelayCommand]
     private async Task CheckNowAsync()
@@ -191,6 +244,8 @@ public sealed partial class SettingsPageViewModel(
 
         ProxyOptions = BuildProxyOptions();
         OnPropertyChanged(nameof(ProxyOptions));
+        ProtocolOptions = BuildProtocolOptions();
+        OnPropertyChanged(nameof(ProtocolOptions));
         OnPropertyChanged(nameof(CurrentVersionLabel));
 
         if (updates.Last is { } last)
@@ -218,6 +273,14 @@ public sealed partial class SettingsPageViewModel(
         UpdateFailure.BadResponse => Loc.Get("settings.updateFailedBadResponse"),
         _ => Loc.Format("settings.updateFailedNetwork", result.Detail ?? string.Empty),
     };
+
+    private static IReadOnlyList<ProtocolOption> BuildProtocolOptions() =>
+    [
+        new(ProxyProtocol.Http, "HTTP"),
+        new(ProxyProtocol.Socks5, "SOCKS5"),
+        new(ProxyProtocol.Socks4, "SOCKS4"),
+        new(ProxyProtocol.Socks4a, "SOCKS4a"),
+    ];
 
     private static IReadOnlyList<ProxyOption> BuildProxyOptions() =>
     [

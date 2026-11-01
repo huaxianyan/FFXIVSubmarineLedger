@@ -8,8 +8,8 @@ public partial class SettingsPageView : UserControl
 {
     public SettingsPageView() => InitializeComponent();
 
-    /// <summary>地址框失焦时才保存，避免每敲一个字写一次库。</summary>
-    private void OnProxyUrlLostFocus(object? sender, FocusChangedEventArgs e) =>
+    /// <summary>代理的输入框失焦时才保存，避免每敲一个字写一次库。</summary>
+    private void OnProxyFieldLostFocus(object? sender, FocusChangedEventArgs e) =>
         (DataContext as SettingsPageViewModel)?.SaveUpdateOptions();
 
     protected override void OnDataContextChanged(EventArgs e)

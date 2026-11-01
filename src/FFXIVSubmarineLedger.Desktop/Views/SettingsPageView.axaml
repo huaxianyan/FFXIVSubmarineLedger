@@ -80,21 +80,43 @@
                     <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr settings.proxyTitle}" />
                     <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
                                Text="{loc:Tr settings.proxyHint}" />
-                    <StackPanel Orientation="Horizontal" Spacing="10">
-                        <ComboBox FontSize="12" MinWidth="170"
-                                  ItemsSource="{Binding ProxyOptions}"
-                                  SelectedItem="{Binding SelectedProxy}">
+                    <ComboBox FontSize="12" MinWidth="170" HorizontalAlignment="Left"
+                              ItemsSource="{Binding ProxyOptions}"
+                              SelectedItem="{Binding SelectedProxy}">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ProxyOption">
+                                <TextBlock FontSize="12" Text="{Binding Label}" />
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
+
+                    <!-- 自定义代理：协议、地址、端口分开填，不用用户自己拼 URL -->
+                    <StackPanel Orientation="Horizontal" Spacing="10" IsVisible="{Binding CanEditProxy}">
+                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
+                                   Text="{loc:Tr settings.proxyProtocol}" />
+                        <ComboBox FontSize="12" MinWidth="110"
+                                  ItemsSource="{Binding ProtocolOptions}"
+                                  SelectedItem="{Binding SelectedProtocol}">
                             <ComboBox.ItemTemplate>
-                                <DataTemplate x:DataType="vm:ProxyOption">
+                                <DataTemplate x:DataType="vm:ProtocolOption">
                                     <TextBlock FontSize="12" Text="{Binding Label}" />
                                 </DataTemplate>
                             </ComboBox.ItemTemplate>
                         </ComboBox>
-                        <TextBox FontSize="12" MinWidth="260"
-                                 IsEnabled="{Binding CanEditProxyUrl}"
-                                 Text="{Binding ProxyUrl}"
-                                 Watermark="{loc:Tr settings.proxyUrlPlaceholder}"
-                                 LostFocus="OnProxyUrlLostFocus" />
+
+                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
+                                   Text="{loc:Tr settings.proxyHost}" />
+                        <TextBox FontSize="12" MinWidth="180"
+                                 Text="{Binding ProxyHost}"
+                                 PlaceholderText="{loc:Tr settings.proxyHostPlaceholder}"
+                                 LostFocus="OnProxyFieldLostFocus" />
+
+                        <TextBlock FontSize="12" Opacity="0.7" VerticalAlignment="Center"
+                                   Text="{loc:Tr settings.proxyPort}" />
+                        <TextBox FontSize="12" Width="80"
+                                 Text="{Binding ProxyPort}"
+                                 PlaceholderText="{loc:Tr settings.proxyPortPlaceholder}"
+                                 LostFocus="OnProxyFieldLostFocus" />
                     </StackPanel>
                 </StackPanel>
             </Border>

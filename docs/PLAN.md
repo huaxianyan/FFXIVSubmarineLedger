@@ -276,7 +276,10 @@ IChatLogParser.TryParse(LogLine line, out LootEntry entry)
 - **只查版本号**：`GET https://api.github.com/repos/huaxianyan/FFXIVSubmarineLedger/releases/latest`，比对 `tag_name` 与当前版本。不下载、不安装、不上传任何东西。
 - 启动时查一次（可在设置页关掉），设置页也能手动查；两处走同一个 `UpdateService`，共享上次结果。
 - **语义边界**：仓库还没发过正式版时 GitHub 回 404，这按「已是最新」处理，不算失败。失败分三类并分别出文案：连不上（网络/代理/超时）、HTTP 非 2xx、响应读不懂。
-- **代理**：三种模式——跟随系统 / 不使用 / 自定义（`http://主机:端口`）。自定义地址写错时当场提示格式，而不是让它在检查时报「连不上」。代理只用于更新检查，记账全程不联网。
+- **代理**：三种模式——跟随系统 / 不使用 / 自定义。自定义时**协议、地址、端口分开填**（协议从 HTTP / SOCKS5 / SOCKS4 / SOCKS4a 里选），用户不用自己拼 `http://主机:端口`。换协议时端口自动补成该协议的默认值（HTTP 8080、SOCKS 1080），用户填过的不覆盖。
+- **协议只列 `SocketsHttpHandler` 认的四种**：http / socks4 / socks4a / socks5。写 `https://` 能存进设置、要到发请求时才抛 `NotSupportedException`，所以界面上干脆不提供，`ProxySelectorTests` 钉住这个清单。
+- 误填当场说清怎么改：把整条 URL 塞进地址栏、把端口写进地址里、带路径、端口越界，各有各的提示，而不是笼统一句「地址无效」。代理只用于更新检查，记账全程不联网。
+- 旧版存的是一整串 `ProxyUrl`，读设置时自动拆成三个字段（`SqliteSettingsStore.MigrateLegacyProxyUrl`），否则老用户升级后代理会静默失效、只看到「检查更新失败」。
 - 未使用 token：未认证每小时 60 次，手动点几下完全够；加 token 意味着要用户配密钥，不值。
 
 ### 显示语言（i18n）

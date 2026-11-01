@@ -36,13 +36,17 @@ public sealed class SettingsService(ISettingsStore store)
     public async Task SetUpdateOptionsAsync(
         bool checkForUpdates,
         ProxyMode proxyMode,
-        string proxyUrl,
+        ProxyProtocol proxyProtocol,
+        string proxyHost,
+        int proxyPort,
         CancellationToken ct = default)
     {
         AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
         settings.CheckForUpdates = checkForUpdates;
         settings.ProxyMode = proxyMode;
-        settings.ProxyUrl = proxyUrl ?? string.Empty;
+        settings.ProxyProtocol = proxyProtocol;
+        settings.ProxyHost = proxyHost ?? string.Empty;
+        settings.ProxyPort = proxyPort;
         await SaveAsync(settings, ct).ConfigureAwait(false);
     }
 

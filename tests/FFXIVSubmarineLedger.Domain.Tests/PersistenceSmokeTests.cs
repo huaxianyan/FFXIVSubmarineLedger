@@ -4,6 +4,7 @@ using FFXIVSubmarineLedger.Application.Records;
 using FFXIVSubmarineLedger.Application.Settings;
 using FFXIVSubmarineLedger.Domain.Characters;
 using FFXIVSubmarineLedger.Domain.Records;
+using FFXIVSubmarineLedger.Domain.Settings;
 using FFXIVSubmarineLedger.Infrastructure.Persistence;
 using Microsoft.Data.Sqlite;
 
@@ -43,6 +44,36 @@ public sealed class PersistenceSmokeTests : IDisposable
         Assert.Equal("Alice", all[0].Name);
         Assert.Equal("红玉海", all[0].World);
         Assert.True(all[0].IsDefault);
+    }
+
+    /// <summary>
+    /// 旧版代理存的是一整串 URL。升级后必须能把它拆成协议、主机、端口，
+    /// 否则用户会发现代理「自己失效了」，看到的却是「检查更新失败」。
+    /// </summary>
+    [Fact]
+    public async Task LegacyProxyUrlIsCarriedOverIntoTheThreeFields()
+    {
+        // 直接写一行旧格式的设置，模拟上次运行留下的数据。
+        using (SqliteConnection connection = _database.Open())
+        using (SqliteCommand command = connection.CreateCommand())
+        {
+            command.CommandText =
+                """
+                INSERT INTO settings (key, value) VALUES ('app', $value)
+                ON CONFLICT (key) DO UPDATE SET value = excluded.value;
+                """;
+            command.Parameters.AddWithValue(
+                "$value",
+                """{"ProxyMode":2,"ProxyUrl":"socks5://10.0.0.2:1080"}""");
+            command.ExecuteNonQuery();
+        }
+
+        SettingsService service = new(new SqliteSettingsStore(_database));
+        AppSettings settings = await service.GetAsync();
+
+        Assert.Equal(ProxyProtocol.Socks5, settings.ProxyProtocol);
+        Assert.Equal("10.0.0.2", settings.ProxyHost);
+        Assert.Equal(1080, settings.ProxyPort);
     }
 
     [Fact]

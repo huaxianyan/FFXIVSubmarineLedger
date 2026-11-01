@@ -47,6 +47,9 @@ public sealed record LanguageChoice(string Tag, string Label);
 /// <summary>代理模式下拉里的一项。</summary>
 public sealed record ProxyOption(ProxyMode Mode, string Label);
 
+/// <summary>代理协议的选项。文字随语言变，换语言时重建。</summary>
+public sealed record ProtocolOption(ProxyProtocol Protocol, string Label);
+
 /// <summary>筛选下拉里的一项。</summary>
 /// <param name="Id">对应的实体 ID；null 表示「全部」。</param>
 /// <param name="Label">下拉里显示的文字。</param>

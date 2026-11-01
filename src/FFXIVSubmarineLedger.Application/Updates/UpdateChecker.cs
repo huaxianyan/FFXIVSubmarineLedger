@@ -10,7 +10,9 @@ namespace FFXIVSubmarineLedger.Application.Updates;
 /// 只用公开 API、不要 token：未认证每小时 60 次，一天手动点几下完全够用。
 /// 网络失败一律归为「检查失败」并把原因带回去，不抛异常——更新检查不该影响记账。
 /// </summary>
-public sealed class UpdateChecker(string repository, Func<ProxyMode, string?, HttpClient> clientFactory)
+public sealed class UpdateChecker(
+    string repository,
+    Func<ProxyMode, ProxyProtocol, string?, int, HttpClient> clientFactory)
 {
     /// <summary>检查超时。慢到 10 秒还没回应，就当它是网络不通。</summary>
     public static readonly TimeSpan Timeout = TimeSpan.FromSeconds(10);
@@ -18,7 +20,9 @@ public sealed class UpdateChecker(string repository, Func<ProxyMode, string?, Ht
     public async Task<UpdateCheckResult> CheckAsync(
         Version current,
         ProxyMode proxyMode,
-        string? proxyUrl,
+        ProxyProtocol proxyProtocol,
+        string? proxyHost,
+        int proxyPort,
         CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(current);
@@ -29,7 +33,7 @@ public sealed class UpdateChecker(string repository, Func<ProxyMode, string?, Ht
 
         try
         {
-            using HttpClient client = clientFactory(proxyMode, proxyUrl);
+            using HttpClient client = clientFactory(proxyMode, proxyProtocol, proxyHost, proxyPort);
             client.Timeout = Timeout;
             client.DefaultRequestHeaders.UserAgent.Add(new ProductInfoHeaderValue("FFXIVSubmarineLedger", AppVersion.Describe(current)));
             client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));

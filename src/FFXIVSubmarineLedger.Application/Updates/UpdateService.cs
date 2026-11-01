@@ -20,7 +20,13 @@ public sealed class UpdateService(UpdateChecker checker, SettingsService setting
         AppSettings options = await settings.GetAsync(ct).ConfigureAwait(false);
 
         Last = await checker
-            .CheckAsync(Current, options.ProxyMode, options.ProxyUrl, ct)
+            .CheckAsync(
+                Current,
+                options.ProxyMode,
+                options.ProxyProtocol,
+                options.ProxyHost,
+                options.ProxyPort,
+                ct)
             .ConfigureAwait(false);
 
         return Last;
