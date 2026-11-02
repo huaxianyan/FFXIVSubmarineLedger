@@ -584,10 +584,12 @@ v0.4 设计的是「截背包区域 → 网格检测 → 图标匹配」。路�
 
 ### 图标
 
-`tools/make_icon.py` 生成，纯标准库，用有符号距离场（SDF）画图，每个尺寸按矢量重画而不是缩放大图。
+画面直接用**游戏内的金币图标**：`tools/assets/gil-72.png`，取自 XIVAPI 的 `ui/icon/065000/065002_hr1.tex`（72×72 RGBA）。`tools/make_icon.py` 把它重采样成各尺寸并打包。
 
-- 产物：`src/FFXIVSubmarineLedger.Desktop/Assets/app.ico`（16/24/32/48/64/128/256 七个尺寸，exe 与任务栏用）、`app.png`（256，窗口用）、`docs/icon.png`（README 顶部）、`docs/icon-sizes.png`（浅色与深色背景的尺寸对照）。
-- 画面：深海蓝圆角底 + 一圈细金线 + 潜艇侧影（艇身、指挥塔、潜望镜、螺旋桨）+ 发光的琥珀色舷窗 + 右下角一枚金币。
-- 舷窗比艇身亮（亮度 0.92 vs 0.81），小尺寸下才不会看成「洞」。
-- 改样式只改脚本里的「设计参数」那段，坐标都在 256×256 设计空间。`python tools/make_icon.py --sheet` 重新出图，`--preview` 在终端打 ASCII 预览，没有图像工具也能核对轮廓。
+- 产物：`Assets/app.ico`（16/24/32/48/64/128/256 七个尺寸，exe 与任务栏）、`Assets/app.png`（256，窗口标题栏）、`docs/icon.png`（README 顶部）、`docs/icon-sizes.png`（浅色与深色背景的尺寸对照）。
+- 源图只有 72×72，所以用 Catmull-Rom 双三次重采样逐尺寸生成；**按预乘 alpha 计算**，否则半透明边缘会渗黑。Catmull-Rom 有负瓣，结果要钳到 0..255。
+- 源图四周自带透明边，生成前**先裁到不透明包围盒**再居中，否则各尺寸都会偏小且不居中（16 px 下看得出来）。
+- 边距按像素算（`margin = round(size * 0.04)`）而不是按比例，用比例算在奇数尺寸上会偏一格。
+- 改图只改脚本：`python tools/make_icon.py --sheet` 重新出图，`--preview` 在终端打 ASCII 预览（没有图像工具也能核对轮廓）。
 - `ShellLayoutTests.WindowIconLoads` 断言窗口图标能加载：资源路径写错时 Avalonia 在建窗口时抛异常，表现成「双击没反应」。
+- **素材版权**：这是 Square Enix 的游戏素材，仓库是 GPL-3.0。自用没问题，若要正式公开发布，得先确认这条（或换回自制图形，矢量版在提交 `448ab65` 里）。
