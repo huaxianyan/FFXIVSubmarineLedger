@@ -43,18 +43,25 @@ FIELD_DARK = "#B98A42"
 FIELD_EDGE = "#8A6531"
 
 RELIEF_TOP = "#FFF7DA"
-RELIEF_BOTTOM = "#9A7434"
+PROP_LIGHT = "#FFF8DC"
+RELIEF_BOTTOM = "#E2C079"
 RELIEF_EDGE = "#4A3418"
 
 # 潜艇浮雕：艇身、指挥塔、潜望镜、螺旋桨
-# 整体右移 6、下移 11，让「含螺旋桨」的轮廓正好落在圆心：
-# 不挪的话潜艇会偏左上，币面下半空一大块。
-HULL = (68.0, 141.0, 174.0, 141.0, 25.0)
-TOWER = (118.0, 117.0, 146.0, 117.0, 12.5)
-PERISCOPE = (132.0, 105.0, 132.0, 91.0, 3.8)
-PERISCOPE_HEAD = (132.0, 91.0, 143.0, 91.0, 3.0)
-PROP_HUB = (198.0, 141.0, 5.5)
-PORTHOLE = (92.0, 141.0, 10.0)
+# 艇身右端收在 184、桨毂放 192：中间留一道窄缝，不然螺旋桨会被艇身吞掉
+# （胶囊的端头是圆的，半径会多伸出 24，之前桨毂整个落在艇身里）。
+# 「含螺旋桨」的轮廓要正好落在圆心，币面才不会一半空一半挤。
+HULL = (70.0, 141.0, 156.0, 141.0, 24.0)
+TOWER = (110.0, 118.0, 138.0, 118.0, 12.5)
+PERISCOPE = (124.0, 105.0, 124.0, 92.0, 3.8)
+PERISCOPE_HEAD = (124.0, 92.0, 135.0, 92.0, 3.0)
+PROP_HUB = (194.0, 141.0, 6.5)
+PORTHOLE = (86.0, 141.0, 10.0)
+
+# 桨叶：一根朝下、两根朝上斜，侧视下最像螺旋桨
+PROP_ANGLES = (90.0, 210.0, 330.0)
+PROP_BLADE_LENGTH = 16.0
+PROP_BLADE_RADIUS = 5.0
 
 
 # ---------------------------------------------------------------- 颜色工具
@@ -112,23 +119,32 @@ def band(d_px: float, half_width: float) -> float:
 
 # ---------------------------------------------------------------- 画面
 
-def submarine_distance(px: float, py: float) -> float:
-    """潜艇浮雕的轮廓（含螺旋桨）。"""
-    d = min(
+def body_distance(px: float, py: float) -> float:
+    """艇身、指挥塔、潜望镜。"""
+    return min(
         sd_capsule(px, py, *HULL),
         sd_capsule(px, py, *TOWER),
         sd_capsule(px, py, *PERISCOPE),
         sd_capsule(px, py, *PERISCOPE_HEAD),
-        sd_circle(px, py, *PROP_HUB),
     )
 
-    for angle in (0.0, 120.0, 240.0):
+
+def propeller_distance(px: float, py: float) -> float:
+    """桨毂与三片桨叶。单独算，因为它用更亮的金属色，不然和艇身糊成一片。"""
+    d = sd_circle(px, py, *PROP_HUB)
+
+    for angle in PROP_ANGLES:
         radians = math.radians(angle)
-        bx = PROP_HUB[0] + math.cos(radians) * 12.0
-        by = PROP_HUB[1] + math.sin(radians) * 12.0
-        d = min(d, sd_capsule(px, py, PROP_HUB[0], PROP_HUB[1], bx, by, 3.6))
+        bx = PROP_HUB[0] + math.cos(radians) * PROP_BLADE_LENGTH
+        by = PROP_HUB[1] + math.sin(radians) * PROP_BLADE_LENGTH
+        d = min(d, sd_capsule(px, py, PROP_HUB[0], PROP_HUB[1], bx, by, PROP_BLADE_RADIUS))
 
     return d
+
+
+def submarine_distance(px: float, py: float) -> float:
+    """整艘潜艇的轮廓（投影用）。"""
+    return min(body_distance(px, py), propeller_distance(px, py))
 
 
 def shade(px: float, py: float, scale: float) -> tuple[float, float, float, float]:
@@ -166,21 +182,28 @@ def shade(px: float, py: float, scale: float) -> tuple[float, float, float, floa
         field = mix(field, rgb(FIELD_EDGE), clamp((rim - 0.72) / 0.28) * 0.55)
         result = over(result, field, field_alpha)
 
-    # 5) 潜艇浮雕：先投影，再本体，最后压一条亮边和一圈描边
-    body_d = submarine_distance(px, py)
-
+    # 5) 潜艇浮雕：先投影，再本体与螺旋桨
     # 投影：整体往右下错开，看着像凸出版面
     shadow_d = submarine_distance(px - 2.6, py - 3.0)
     result = over(result, rgb(RELIEF_EDGE), cover(px_(shadow_d)) * 0.45)
 
+    body_d = body_distance(px, py)
     body_alpha = cover(px_(body_d))
     if body_alpha > 0:
-        relief = mix(rgb(RELIEF_TOP), rgb(RELIEF_BOTTOM), clamp((py - 87.0) / 79.0))
+        relief = mix(rgb(RELIEF_TOP), rgb(RELIEF_BOTTOM), clamp((py - 88.0) / 77.0))
         result = over(result, relief, body_alpha)
 
-        # 上缘高光：同一形状往上挪一点，只留落在本体里的部分
-        highlight_d = submarine_distance(px + 1.6, py + 2.2)
-        result = over(result, rgb(RELIEF_TOP), cover(px_(highlight_d)) * 0.55 * body_alpha)
+        # 左上缘高光：本体减去「往右下偏移后的本体」，剩下的那道月牙就是受光边。
+        # 直接拿偏移后的覆盖度当高光会把整个艇身洗白，纵向渐变全被抹平。
+        lit_d = body_distance(px - 2.0, py - 2.6)
+        result = over(result, rgb(RELIEF_TOP), body_alpha * (1.0 - cover(px_(lit_d))) * 0.75)
+
+    # 螺旋桨用更亮的金属色，否则和艇身同色、糊成一片，尾巴看着是秃的
+    prop_alpha = cover(px_(propeller_distance(px, py)))
+    if prop_alpha > 0:
+        result = over(result, rgb(PROP_LIGHT), prop_alpha)
+        prop_lit = propeller_distance(px - 1.4, py - 1.8)
+        result = over(result, (1.0, 1.0, 1.0), prop_alpha * (1.0 - cover(px_(prop_lit))) * 0.45)
 
         # 不加描边：潜望镜这类细部件在小尺寸下只有半个像素宽，整根都落在「边缘」上，
         # 描边会把它们涂成一团黑。立体感交给投影与上缘高光。
