@@ -132,6 +132,22 @@
                 </StackPanel>
             </Border>
 
+            <Border Padding="18" CornerRadius="10" BorderThickness="1"
+                    BorderBrush="#40808080" Background="#07808080">
+                <StackPanel Spacing="10">
+                    <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr settings.debugTitle}" />
+                    <TextBlock FontSize="12" Opacity="0.7" TextWrapping="Wrap"
+                               Text="{loc:Tr settings.debugHint}" />
+                    <CheckBox Content="{loc:Tr settings.dumpChatLog}" IsChecked="{Binding DumpChatLog}" />
+                    <SelectableTextBlock FontSize="11" Opacity="0.55" TextWrapping="Wrap"
+                                         Text="{Binding ChatLogFolder}" />
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Button Content="{loc:Tr settings.openChatLogFolder}"
+                                Command="{Binding OpenChatLogFolderCommand}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
             <Border Padding="14" CornerRadius="10" BorderThickness="1"
                     BorderBrush="#40808080" Background="#07808080"
                     IsVisible="{Binding HasStatus}">

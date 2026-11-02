@@ -5,16 +5,19 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 
 using FFXIVSubmarineLedger.Application.Localization;
+using FFXIVSubmarineLedger.Desktop.Services;
 
 namespace FFXIVSubmarineLedger.Desktop.ViewModels;
 
 public sealed partial class MainWindowViewModel : ObservableObject
 {
     private readonly ApplicationComposition _composition;
+    private readonly ChatLogDump _chatDump;
 
     public MainWindowViewModel(ApplicationComposition composition, Func<TopLevel?> topLevelProvider)
     {
         _composition = composition;
+        _chatDump = new ChatLogDump(composition.DataDirectory);
 
         Characters = new CharacterManagerViewModel(composition.Characters);
         Records = new RecordsPageViewModel(
@@ -22,7 +25,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             Characters,
             composition.Records,
             composition.Submarines,
-            composition.CatalogSource);
+            composition.CatalogSource,
+            _chatDump);
         Ledger = new LedgerPageViewModel(
             composition.Records,
             composition.Submarines,
@@ -42,7 +46,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
             composition.Updates,
             composition.DataDirectory,
             composition.Database.DatabasePath,
-            composition.CatalogSource);
+            composition.CatalogSource,
+            _chatDump);
 
         // 换语言后页头、页标签与统计里的文案要跟着变。
         _ = CheckForUpdatesOnStartupAsync();
@@ -192,5 +197,12 @@ public sealed partial class MainWindowViewModel : ObservableObject
         }
     }
 
-    public Task InitializeAsync() => RefreshAsync();
+    public async Task InitializeAsync()
+    {
+        // 先把调试开关读进来：用户可能在设置页里开过，重启后开监听就该继续记。
+        AppSettings settings = await _composition.Settings.GetAsync().ConfigureAwait(true);
+        _chatDump.Enabled = settings.DumpChatLog;
+
+        await RefreshAsync().ConfigureAwait(true);
+    }
 }

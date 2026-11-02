@@ -32,4 +32,10 @@ public sealed class AppSettings
 
     /// <summary>格子边长小于该像素值时，数量交给用户手输，不做自动识别。</summary>
     public int MinCellSizeForQuantityOcr { get; set; } = 40;
+
+    /// <summary>
+    /// 调试模式：把从游戏聊天框读到的原文记到 txt。
+    /// 用于其它语言的客户端用户把样本发回来，照着补对应语言的解析规则。
+    /// </summary>
+    public bool DumpChatLog { get; set; }
 }

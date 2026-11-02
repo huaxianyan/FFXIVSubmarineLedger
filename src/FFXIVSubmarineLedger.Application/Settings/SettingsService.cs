@@ -56,4 +56,12 @@ public sealed class SettingsService(ISettingsStore store)
         settings.LastSelectedCharacterId = characterId;
         await SaveAsync(settings, ct).ConfigureAwait(false);
     }
+
+    /// <summary>调试模式：是否把读到的聊天原文记到 txt。</summary>
+    public async Task SetDumpChatLogAsync(bool dump, CancellationToken ct = default)
+    {
+        AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
+        settings.DumpChatLog = dump;
+        await SaveAsync(settings, ct).ConfigureAwait(false);
+    }
 }

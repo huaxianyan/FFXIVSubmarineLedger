@@ -30,6 +30,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     private readonly Lazy<ItemCatalog> _catalog;
     private readonly OcrService _ocr = new();
     private readonly SharlayanChatReader _chat = new();
+    private readonly ChatLogDump _chatDump;
 
     /// <summary>每载入一张图就加一，识别完发现代数变了就丢弃结果（用户可能已换成另一张）。</summary>
     private int _recognizeGeneration;
@@ -47,12 +48,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         CharacterManagerViewModel characters,
         ILootRecordRepository records,
         ISubmarineRepository submarines,
-        Lazy<ItemCatalog> catalog)
+        Lazy<ItemCatalog> catalog,
+        ChatLogDump chatDump)
     {
         _topLevelProvider = topLevelProvider;
         _records = records;
         _submarines = submarines;
         _catalog = catalog;
+        _chatDump = chatDump;
         Characters = characters;
 
         Characters.PropertyChanged += (_, args) =>
@@ -448,6 +451,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             while (!token.IsCancellationRequested)
             {
                 IReadOnlyList<string> lines = await Task.Run(_chat.ReadNewLines, token).ConfigureAwait(true);
+                _chatDump.Write(lines);
 
                 if (lines.Count > 0)
                 {
@@ -531,6 +535,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             }
 
             IReadOnlyList<string> lines = await Task.Run(_chat.ReadNewLines).ConfigureAwait(true);
+            _chatDump.Write(lines);
 
             if (lines.Count == 0)
             {

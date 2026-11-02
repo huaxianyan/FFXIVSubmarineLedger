@@ -124,7 +124,8 @@ public sealed class ProxyFormLayoutTests
                 new Version(0, 1, 0)),
             Path.GetTempPath(),
             Path.Combine(Path.GetTempPath(), "settings-test.db"),
-            new Lazy<Infrastructure.Catalog.ItemCatalog>(() => Infrastructure.Catalog.ItemCatalog.Load()));
+            new Lazy<Infrastructure.Catalog.ItemCatalog>(() => Infrastructure.Catalog.ItemCatalog.Load()),
+            new Services.ChatLogDump(Path.GetTempPath()));
 
         var window = new Window { Content = new Views.SettingsPageView { DataContext = page }, Width = 1100, Height = 900 };
         window.Show();

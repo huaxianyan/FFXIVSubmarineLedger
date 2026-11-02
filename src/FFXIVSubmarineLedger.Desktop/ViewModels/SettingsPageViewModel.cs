@@ -9,6 +9,7 @@ using FFXIVSubmarineLedger.Application.Errors;
 using FFXIVSubmarineLedger.Application.Localization;
 using FFXIVSubmarineLedger.Application.Settings;
 using FFXIVSubmarineLedger.Domain.Settings;
+using FFXIVSubmarineLedger.Desktop.Services;
 using FFXIVSubmarineLedger.Infrastructure.Catalog;
 using FFXIVSubmarineLedger.Platform.Windows;
 
@@ -25,7 +26,8 @@ public sealed partial class SettingsPageViewModel(
     UpdateService updates,
     string dataDirectory,
     string databasePath,
-    Lazy<ItemCatalog> catalog) : ObservableObject
+    Lazy<ItemCatalog> catalog,
+    ChatLogDump chatDump) : ObservableObject
 {
     /// <summary>代理三种模式的选项。文字随语言变，换语言时重建。</summary>
     public IReadOnlyList<ProxyOption> ProxyOptions { get; private set; } = BuildProxyOptions();
@@ -67,6 +69,36 @@ public sealed partial class SettingsPageViewModel(
 
     /// <summary>只有自定义模式才需要填协议、地址与端口。</summary>
     public bool CanEditProxy => SelectedProxy?.Mode == ProxyMode.Custom;
+
+    /// <summary>调试记录的存放目录，界面上直接展示路径。</summary>
+    public string ChatLogFolder => chatDump.Folder;
+
+    /// <summary>调试模式：把从游戏读到的聊天原文记成 txt，供其它语言的客户端用户发回样本。</summary>
+    [ObservableProperty]
+    private bool _dumpChatLog;
+
+    partial void OnDumpChatLogChanged(bool value)
+    {
+        // 运行时开关跟着变，装载时也算（让监听一开始就用对状态）。
+        chatDump.Enabled = value;
+
+        if (_loadingUpdateOptions)
+            return;
+
+        _ = SaveDumpChatLogAsync(value);
+    }
+
+    private async Task SaveDumpChatLogAsync(bool value)
+    {
+        try
+        {
+            await settings.SetDumpChatLogAsync(value).ConfigureAwait(true);
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            StatusMessage = Loc.Format("settings.saveFailed", exception.Message);
+        }
+    }
 
     /// <summary>装载设置时不要回写，否则一进页面就写一遍库。</summary>
     private bool _loadingUpdateOptions;
@@ -126,6 +158,7 @@ public sealed partial class SettingsPageViewModel(
                 ? current.ProxyPort.ToString(CultureInfo.InvariantCulture)
                 : string.Empty;
             SelectedProxy = ProxyOptions.FirstOrDefault(x => x.Mode == current.ProxyMode) ?? ProxyOptions[0];
+            DumpChatLog = current.DumpChatLog;
         }
         finally
         {
@@ -308,6 +341,22 @@ public sealed partial class SettingsPageViewModel(
         {
             WindowsShell.OpenFolder(DataDirectory);
             StatusMessage = Loc.Get("settings.opened");
+        }
+        catch (Exception exception) when (exception is not OutOfMemoryException)
+        {
+            StatusMessage = Loc.Format("settings.openFailed", exception.Message);
+        }
+    }
+
+    [RelayCommand]
+    private void OpenChatLogFolder()
+    {
+        try
+        {
+            // 还没记录过时目录不存在，先建出来再打开，用户才知道文件会落在哪。
+            Directory.CreateDirectory(ChatLogFolder);
+            WindowsShell.OpenFolder(ChatLogFolder);
+            StatusMessage = Loc.Get("settings.openedChatLog");
         }
         catch (Exception exception) when (exception is not OutOfMemoryException)
         {

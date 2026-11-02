@@ -4,6 +4,7 @@ using FFXIVSubmarineLedger.Application.Settings;
 using FFXIVSubmarineLedger.Application.Updates;
 using FFXIVSubmarineLedger.Domain.Characters;
 using FFXIVSubmarineLedger.Domain.Settings;
+using FFXIVSubmarineLedger.Desktop.Services;
 using FFXIVSubmarineLedger.Desktop.ViewModels;
 using FFXIVSubmarineLedger.Infrastructure.Catalog;
 
@@ -12,9 +13,12 @@ namespace FFXIVSubmarineLedger.Desktop.Tests;
 /// <summary>搭一个不碰磁盘的设置页，供排版检查用。</summary>
 internal static class SettingsForm
 {
-    public static SettingsPageViewModel Build()
+    public static SettingsPageViewModel Build() => Build(out _);
+
+    public static SettingsPageViewModel Build(out ChatLogDump chatDump)
     {
         var settings = new SettingsService(new MemoryStore());
+        chatDump = new ChatLogDump(Path.GetTempPath());
         return new SettingsPageViewModel(
             () => null,
             new BackupService(new MemoryBackup()),
@@ -25,7 +29,8 @@ internal static class SettingsForm
                 new Version(0, 1, 0)),
             Path.GetTempPath(),
             Path.Combine(Path.GetTempPath(), "settings-form.db"),
-            new Lazy<ItemCatalog>(() => ItemCatalog.Load()));
+            new Lazy<ItemCatalog>(() => ItemCatalog.Load()),
+            chatDump);
     }
 
     private sealed class MemoryStore : ISettingsStore
