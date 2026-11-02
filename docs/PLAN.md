@@ -581,3 +581,13 @@ v0.4 设计的是「截背包区域 → 网格检测 → 图标匹配」。路�
 3. 这条「真实样本回归 + 宁可多算」的做法应沿用到新路线：日志行宁可多读几行让人删，也不要把某一行切半漏掉。
 
 **已删除**（2026-10-27，按新路线清理）：`GridDetector`、`GridOverlay`、`GridDetectionOptions`、`GridDetectionResult`、`IconExtractor`、`IconExtractionOptions`、`IconPatch`、`GrayImage`、`RgbImage`、`ScreenshotAnalyzer`，三个 `Recognition` 测试与 `Samples/bag-371x177.pgm`，以及 `tools/analyze_grid.py`、`tools/test_scale.py`。需要回顾时从 Git 历史取。灰度容器在写文本行定位时重新引入，不为旧路线提前留着。
+
+### 图标
+
+`tools/make_icon.py` 生成，纯标准库，用有符号距离场（SDF）画图，每个尺寸按矢量重画而不是缩放大图。
+
+- 产物：`src/FFXIVSubmarineLedger.Desktop/Assets/app.ico`（16/24/32/48/64/128/256 七个尺寸，exe 与任务栏用）、`app.png`（256，窗口用）、`docs/icon.png`（README 顶部）、`docs/icon-sizes.png`（浅色与深色背景的尺寸对照）。
+- 画面：深海蓝圆角底 + 一圈细金线 + 潜艇侧影（艇身、指挥塔、潜望镜、螺旋桨）+ 发光的琥珀色舷窗 + 右下角一枚金币。
+- 舷窗比艇身亮（亮度 0.92 vs 0.81），小尺寸下才不会看成「洞」。
+- 改样式只改脚本里的「设计参数」那段，坐标都在 256×256 设计空间。`python tools/make_icon.py --sheet` 重新出图，`--preview` 在终端打 ASCII 预览，没有图像工具也能核对轮廓。
+- `ShellLayoutTests.WindowIconLoads` 断言窗口图标能加载：资源路径写错时 Avalonia 在建窗口时抛异常，表现成「双击没反应」。

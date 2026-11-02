@@ -79,6 +79,20 @@ public sealed class ShellLayoutTests
         window.Close();
     }
 
+    /// <summary>
+    /// 窗口图标必须真的能加载：资源路径写错时 Avalonia 会在建窗口时抛异常，
+    /// 表现成「双击没反应」，比图标难看严重得多。
+    /// </summary>
+    [AvaloniaFact]
+    public void WindowIconLoads()
+    {
+        (Window window, _) = Show();
+
+        Assert.NotNull(window.Icon);
+
+        window.Close();
+    }
+
     private static (Window Window, MainWindowViewModel Shell) Show()
     {
         var shell = new MainWindowViewModel(ApplicationComposition.Create(), () => null);

@@ -1,4 +1,8 @@
-# FFXIVSubmarineLedger
+<div align="center">
+  <img src="docs/icon.png" width="120" alt="FFXIV Submarine Ledger 图标">
+
+  # FFXIVSubmarineLedger
+</div>
 
 FF14 潜艇收益统计工具。收艇后从游戏聊天框里直接读出（也可截日志窗口走 OCR），拿到入手行的物名与数量，按游戏内固定的卖店价算出本次收益，按角色与潜艇归档，并给出日均、月均、年均等统计。
 

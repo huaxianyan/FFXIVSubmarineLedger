@@ -6,6 +6,7 @@
         x:Class="FFXIVSubmarineLedger.Desktop.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{loc:Tr app.title}"
+        Icon="/Assets/app.png"
         Width="1200"
         Height="800"
         MinWidth="960"
