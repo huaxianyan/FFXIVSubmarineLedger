@@ -22,6 +22,7 @@
 
 from __future__ import annotations
 
+import math
 import os
 import struct
 import sys
@@ -35,6 +36,14 @@ LARGEST = max(SIZES)
 BACKGROUND_LUMA = 24
 # 四周留白，占最终边长的比例
 MARGIN = 0.02
+
+# 各尺寸的对比度补偿。源图的浮雕是细纹理，缩小后被平均掉，不补就是一块平色。
+# 大尺寸保持原样，小尺寸逐级加码。
+CONTRAST = {16: 1.9, 24: 1.7, 32: 1.45, 48: 1.25, 64: 1.1}
+
+# 高光压缩：币缘有一圈接近纯白的高光，缩到 19 px 就成白斑，看着像脏点
+HIGHLIGHT_KNEE = 0.80
+HIGHLIGHT_SLOPE = 0.35
 
 
 # ---------------------------------------------------------------- 读 PNG
@@ -183,6 +192,107 @@ def background_mask(width: int, height: int, channels: int, pixels) -> bytearray
             stack.append(index + width)
 
     return visited
+
+
+def clean_silhouette(buffer, canvas: int):
+    """把不规则的币缘修成正圆。
+
+    源图边缘各角度的半径在 471–492 之间摆动，缩到 19 px 就是一圈毛刺。
+    做法：量出每个角度的边界半径，取平均作为正圆半径；圆内原本透明的地方，
+    用同方向「边界往里 2 px」的颜色补上——那里是币的暗边，补出来还是一圈
+    暗边，颜色一致。直接取最小半径做遮罩也能变圆，但会削掉 3.5% 的直径，
+    而且各角度切到的颜色不一致，边上照样花。
+    """
+    center = canvas / 2.0
+    limit = canvas // 2
+    steps = 720
+
+    boundary = []
+    for step in range(steps):
+        angle = step * 2.0 * math.pi / steps
+        cos_a, sin_a = math.cos(angle), math.sin(angle)
+        radius = 0
+        while radius < limit:
+            x = int(center + cos_a * radius)
+            y = int(center + sin_a * radius)
+            if not (0 <= x < canvas and 0 <= y < canvas):
+                break
+            if buffer[(y * canvas + x) * 4 + 3] < 0.5:
+                break
+            radius += 1
+        boundary.append(radius)
+
+    radius = sum(boundary) / steps
+    feather = 1.0
+
+    for y in range(canvas):
+        dy = y + 0.5 - center
+        for x in range(canvas):
+            dx = x + 0.5 - center
+            distance = math.hypot(dx, dy)
+            if distance > radius + feather:
+                base = (y * canvas + x) * 4
+                buffer[base:base + 4] = [0.0, 0.0, 0.0, 0.0]
+                continue
+
+            base = (y * canvas + x) * 4
+            if distance > radius - feather:
+                fade = (radius + feather - distance) / (2.0 * feather)
+                for channel in range(4):
+                    buffer[base + channel] *= fade
+
+            if buffer[base + 3] >= 0.999:
+                continue
+
+            # 圆内但原图透明：沿同方向取边界往里 2 px 的颜色（币的暗边）
+            angle = math.atan2(dy, dx)
+            step = int(math.floor(angle * steps / (2.0 * math.pi))) % steps
+            inner = max(0, boundary[step] - 2)
+            cos_a, sin_a = math.cos(angle), math.sin(angle)
+            sx = int(center + cos_a * inner)
+            sy = int(center + sin_a * inner)
+            if not (0 <= sx < canvas and 0 <= sy < canvas):
+                continue
+            source = (sy * canvas + sx) * 4
+            alpha = fade if distance > radius - feather else 1.0
+            for channel in range(3):
+                buffer[base + channel] = buffer[source + channel] * alpha
+            buffer[base + 3] = alpha
+
+    print(f"币缘修圆：边界 {min(boundary)}–{max(boundary)}，取半径 {radius:.0f} / {limit}")
+    return buffer
+
+
+def compress_highlights(buffer, knee: float = HIGHLIGHT_KNEE, slope: float = HIGHLIGHT_SLOPE):
+    """把接近纯白的高光压下去，缩小后不会变成白斑。"""
+    for i in range(0, len(buffer), 4):
+        alpha = buffer[i + 3]
+        if alpha <= 0.0:
+            continue
+        for channel in range(3):
+            value = buffer[i + channel] / alpha / 255.0
+            if value > knee:
+                value = knee + (value - knee) * slope
+            buffer[i + channel] = value * alpha * 255.0
+
+    return buffer
+
+
+def contrast(buffer, size: int, factor: float):
+    """以中灰为轴拉对比度。只动颜色，不动 alpha。"""
+    if factor == 1.0:
+        return buffer
+
+    for i in range(0, len(buffer), 4):
+        alpha = buffer[i + 3]
+        if alpha <= 0.0:
+            continue
+        for channel in range(3):
+            value = buffer[i + channel] / alpha / 255.0
+            value = min(1.0, max(0.0, 0.5 + (value - 0.5) * factor))
+            buffer[i + channel] = value * alpha * 255.0
+
+    return buffer
 
 
 # ---------------------------------------------------------------- 重采样
@@ -443,7 +553,8 @@ def main() -> int:
         raise SystemExit(f"找不到源图 {source}")
 
     buffer, canvas = prepare(source)
-    master = resample(buffer, canvas, canvas, LARGEST, LARGEST)
+    buffer = clean_silhouette(buffer, canvas)
+    master = compress_highlights(resample(buffer, canvas, canvas, LARGEST, LARGEST))
     master_rgba = to_rgba(master, LARGEST, LARGEST)
 
     images = {}
@@ -451,7 +562,10 @@ def main() -> int:
         if size == LARGEST:
             images[size] = master_rgba
         else:
-            images[size] = to_rgba(resample(master, LARGEST, LARGEST, size, size), size, size)
+            scaled = resample(master, LARGEST, LARGEST, size, size)
+            scaled = contrast(scaled, size, CONTRAST.get(size, 1.0))
+            # 顺序不能反：对比度会把压下去的高光重新拉到 255
+            images[size] = to_rgba(compress_highlights(scaled), size, size)
 
     assets = os.path.join(here, "src", "FFXIVSubmarineLedger.Desktop", "Assets")
     os.makedirs(assets, exist_ok=True)
