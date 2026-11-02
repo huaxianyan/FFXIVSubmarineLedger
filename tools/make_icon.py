@@ -1,13 +1,18 @@
 #!/usr/bin/env python3
-"""生成程序图标：Assets/app.ico（多尺寸）+ Assets/app.png（窗口用）。
+"""把一张源图做成程序图标：Assets/app.ico（多尺寸）+ Assets/app.png。
 
-画面是一枚金币，币面浮雕一艘潜艇，风格照着游戏里的金币图标来：
-金铜渐变、亮面高光、深色描边、压出来的立体感。
+源图是 `tools/icon-source.png`（1254×1254、纯黑背景的金币）。
+流程：抠底 → 裁到不透明包围盒 → 补成正方形留边 → 面积平均重采样到各尺寸。
 
-纯标准库，不装 Pillow。图形用有符号距离场（SDF）画，边缘自带抗锯齿，
-每个尺寸单独按矢量重画，所以 16 px 也是清晰的，不是大图缩下来的糊影。
+纯标准库，不装 Pillow。
 
-改样式只改下面「设计参数」那一段，坐标都在 256×256 的设计空间里。
+几个不能省的细节（都踩过）：
+- **按连通区域抠底，不套椭圆遮罩**。这枚币的边缘各角度半径在 472–490 之间，
+  套圆形遮罩要么切掉一块，要么留一圈黑边。
+- **重采样走预乘 alpha**。不预乘的话，透明区域的黑色会渗进边缘，一圈脏边。
+- **面积平均而不是双线性**。1254 → 16 是 78 倍缩小，双线性只采 4 个点，
+  细节全丢还起锯齿；面积平均按覆盖度累加，等于自带低通。
+- 先裁到包围盒再居中，边距按像素算。不裁会偏小且不居中，16 px 看得出来。
 
 用法：
     python tools/make_icon.py             # 写入 Assets/
@@ -17,286 +22,338 @@
 
 from __future__ import annotations
 
-import math
 import os
 import struct
 import sys
 import zlib
 
-DESIGN = 256.0
+SOURCE = os.path.join("tools", "icon-source.png")
 SIZES = (16, 24, 32, 48, 64, 128, 256)
+LARGEST = max(SIZES)
 
-# ---------------------------------------------------------------- 设计参数
-
-COIN_RADIUS = 118.0
-COIN_CENTER = (128.0, 128.0)
-BEZEL_WIDTH = 13.0        # 外圈亮边的宽度
-FIELD_RADIUS = COIN_RADIUS - BEZEL_WIDTH - 2.0
-
-OUTLINE = "#2A1D0C"
-BEZEL_LIGHT = "#FFF0BC"
-BEZEL_DARK = "#7E5C2A"
-GROOVE = "#4A3418"
-
-FIELD_LIGHT = "#F2D79F"
-FIELD_DARK = "#B98A42"
-FIELD_EDGE = "#8A6531"
-
-RELIEF_TOP = "#FFF7DA"
-PROP_LIGHT = "#FFF8DC"
-RELIEF_BOTTOM = "#E2C079"
-RELIEF_EDGE = "#4A3418"
-
-# 潜艇浮雕。参考真实潜艇侧影：细长圆柱艇身、圆头、尾部收细成锥、
-# 前三分之一处一座矩形指挥塔带潜望镜、尾端两叶桨。
-# 比例约 5.5:1——真实的约 11:1，但那样在 32 px 下只剩一条线，读不出来。
-HULL_BODY = (64.0, 142.0, 150.0, 142.0, 15.5)        # 平行中体
-HULL_TAIL = (150.0, 142.0, 198.0, 142.0, 15.5, 2.5)  # 锥形尾段
-SAIL = (86.0, 111.0, 15.0, 18.0, 3.5)                # 指挥塔：中心、半宽、半高、圆角
-MASTS = ((79.0, 95.0, 79.0, 81.0, 2.2),
-         (93.0, 95.0, 93.0, 81.0, 2.2))              # 两根潜望镜
-PROP_HUB = (204.0, 142.0, 5.0)
-PROP_BLADES = ((204.0, 142.0, 204.0, 128.0, 4.0),
-               (204.0, 142.0, 204.0, 156.0, 4.0))    # 两叶桨，侧视就是一条竖线
-PORTHOLE = (62.0, 142.0, 7.5)
-
-# 桨叶：一根朝下、两根朝上斜，侧视下最像螺旋桨
-PROP_ANGLES = (90.0, 210.0, 330.0)
-PROP_BLADE_LENGTH = 16.0
-PROP_BLADE_RADIUS = 5.0
+# 亮度低于这个值、且能从画布边界连通过来的像素算背景
+BACKGROUND_LUMA = 24
+# 四周留白，占最终边长的比例
+MARGIN = 0.02
 
 
-# ---------------------------------------------------------------- 颜色工具
+# ---------------------------------------------------------------- 读 PNG
 
-def rgb(text: str) -> tuple[float, float, float]:
-    text = text.lstrip("#")
-    return tuple(int(text[i:i + 2], 16) / 255.0 for i in (0, 2, 4))
+def load_png(path: str):
+    """只认 8 位、非隔行的灰度/RGB/RGBA——够用，不写通用解码器。"""
+    data = open(path, "rb").read()
+    if data[:8] != b"\x89PNG\r\n\x1a\n":
+        raise SystemExit(f"{path} 不是 PNG")
 
+    position = 8
+    compressed = bytearray()
+    palette = None
+    transparency = None
+    width = height = depth = color_type = interlace = 0
 
-def mix(a, b, t: float):
-    t = clamp(t)
-    return tuple(x + (y - x) * t for x, y in zip(a, b))
+    while position < len(data):
+        length = struct.unpack(">I", data[position:position + 4])[0]
+        tag = data[position + 4:position + 8]
+        body = data[position + 8:position + 8 + length]
 
+        if tag == b"IHDR":
+            width, height, depth, color_type, _, _, interlace = struct.unpack(">IIBBBBB", body)
+        elif tag == b"PLTE":
+            palette = body
+        elif tag == b"tRNS":
+            transparency = body
+        elif tag == b"IDAT":
+            compressed += body
+        elif tag == b"IEND":
+            break
 
-def clamp(x: float, lo: float = 0.0, hi: float = 1.0) -> float:
-    return lo if x < lo else hi if x > hi else x
+        position += 12 + length
 
+    if depth != 8 or interlace != 0 or color_type not in (0, 2, 3, 6):
+        raise SystemExit(f"不支持的 PNG：位深 {depth}、颜色类型 {color_type}、隔行 {interlace}")
 
-def over(dst, src, alpha: float):
-    """把 src 以 alpha 叠到 dst 上（两者都是 RGBA）。"""
-    if alpha <= 0.0:
-        return dst
-    a = dst[3] + alpha * (1.0 - dst[3])
-    if a <= 0.0:
-        return (0.0, 0.0, 0.0, 0.0)
-    out = []
-    for i in range(3):
-        out.append((src[i] * alpha + dst[i] * dst[3] * (1.0 - alpha)) / a)
-    return (out[0], out[1], out[2], a)
+    channels = {0: 1, 2: 3, 3: 1, 4: 2, 6: 4}[color_type]
+    raw = zlib.decompress(bytes(compressed))
+    stride = width * channels
 
+    pixels = bytearray(height * stride)
+    previous = bytearray(stride)
+    cursor = 0
 
-# ---------------------------------------------------------------- 距离场
+    for y in range(height):
+        filter_type = raw[cursor]
+        cursor += 1
+        line = bytearray(raw[cursor:cursor + stride])
+        cursor += stride
 
-def sd_capsule(px, py, ax, ay, bx, by, radius):
-    pax, pay = px - ax, py - ay
-    bax, bay = bx - ax, by - ay
-    denom = bax * bax + bay * bay
-    h = clamp((pax * bax + pay * bay) / denom) if denom else 0.0
-    return math.hypot(pax - bax * h, pay - bay * h) - radius
+        if filter_type == 1:
+            for i in range(channels, stride):
+                line[i] = (line[i] + line[i - channels]) & 0xFF
+        elif filter_type == 2:
+            for i in range(stride):
+                line[i] = (line[i] + previous[i]) & 0xFF
+        elif filter_type == 3:
+            for i in range(stride):
+                left = line[i - channels] if i >= channels else 0
+                line[i] = (line[i] + ((left + previous[i]) >> 1)) & 0xFF
+        elif filter_type == 4:
+            for i in range(stride):
+                left = line[i - channels] if i >= channels else 0
+                up = previous[i]
+                up_left = previous[i - channels] if i >= channels else 0
+                estimate = left + up - up_left
+                da, db, dc = abs(estimate - left), abs(estimate - up), abs(estimate - up_left)
+                if da <= db and da <= dc:
+                    predictor = left
+                elif db <= dc:
+                    predictor = up
+                else:
+                    predictor = up_left
+                line[i] = (line[i] + predictor) & 0xFF
+        elif filter_type != 0:
+            raise SystemExit(f"不认识的 PNG 行过滤类型 {filter_type}")
 
+        pixels[y * stride:(y + 1) * stride] = line
+        previous = line
 
-def sd_circle(px, py, cx, cy, radius):
-    return math.hypot(px - cx, py - cy) - radius
+    if color_type == 3:
+        pixels = expand_palette(pixels, palette or b"", transparency, width, height)
+        channels = 4
 
-
-def sd_round_rect(px, py, cx, cy, half_w, half_h, radius):
-    qx = abs(px - cx) - (half_w - radius)
-    qy = abs(py - cy) - (half_h - radius)
-    return math.hypot(max(qx, 0.0), max(qy, 0.0)) + min(max(qx, qy), 0.0) - radius
-
-
-def sd_round_cone(px, py, ax, ay, bx, by, radius_a, radius_b):
-    """两端半径不同的「胶囊」，用来画潜艇收细的尾段。"""
-    bax, bay = bx - ax, by - ay
-    length2 = bax * bax + bay * bay
-    difference = radius_a - radius_b
-    a2 = length2 - difference * difference
-    inverse = 1.0 / length2
-
-    pax, pay = px - ax, py - ay
-    along = pax * bax + pay * bay
-    past = along - length2
-
-    x2 = (pax * length2 - bax * along) ** 2 + (pay * length2 - bay * along) ** 2
-    y2 = along * along * length2
-    z2 = past * past * length2
-
-    # 判据是 sign(rr)·rr²·x²，不是 a2²·x²。写成后者的话尾段整段被判到外面，
-    # 收细的锥形根本画不出来。
-    k = (1 if difference > 0 else -1) * difference * difference * x2
-
-    if (1 if past > 0 else -1) * a2 * z2 > k:
-        return math.sqrt(x2 + z2) * inverse - radius_b
-    if (1 if along > 0 else -1) * a2 * y2 < k:
-        return math.sqrt(x2 + y2) * inverse - radius_a
-
-    return (math.sqrt(x2 * a2 * inverse) + along * difference) * inverse - radius_a
-
-
-def cover(d_px: float) -> float:
-    """距离（像素）转覆盖度，1 px 宽的过渡带就是抗锯齿。"""
-    return clamp(0.5 - d_px)
-
-
-def band(d_px: float, half_width: float) -> float:
-    """描边：距离绝对值落在半宽内。"""
-    return clamp(half_width + 0.5 - abs(d_px))
-
-
-# ---------------------------------------------------------------- 画面
-
-def body_distance(px: float, py: float) -> float:
-    """艇身（平行中体 + 锥形尾段）、指挥塔、潜望镜。"""
-    d = min(
-        sd_capsule(px, py, *HULL_BODY),
-        sd_round_cone(px, py, *HULL_TAIL),
-        sd_round_rect(px, py, *SAIL),
-    )
-
-    for mast in MASTS:
-        d = min(d, sd_capsule(px, py, *mast))
-
-    return d
+    return width, height, channels, pixels
 
 
-def propeller_distance(px: float, py: float) -> float:
-    """桨毂与两叶桨。单独算，因为它用更亮的金属色，不然和艇身糊成一片。"""
-    d = sd_circle(px, py, *PROP_HUB)
+def expand_palette(pixels, palette, transparency, width, height):
+    """调色板图展开成 RGBA。"""
+    count = len(palette) // 3
+    out = bytearray(width * height * 4)
 
-    for blade in PROP_BLADES:
-        d = min(d, sd_capsule(px, py, *blade))
+    for i in range(width * height):
+        index = pixels[i]
+        out[i * 4 + 0] = palette[index * 3 + 0] if index < count else 0
+        out[i * 4 + 1] = palette[index * 3 + 1] if index < count else 0
+        out[i * 4 + 2] = palette[index * 3 + 2] if index < count else 0
+        out[i * 4 + 3] = transparency[index] if transparency and index < len(transparency) else 255
 
-    return d
+    return out
 
 
-def submarine_distance(px: float, py: float) -> float:
-    """整艘潜艇的轮廓（投影用）。"""
-    return min(body_distance(px, py), propeller_distance(px, py))
+# ---------------------------------------------------------------- 抠底
+
+def background_mask(width: int, height: int, channels: int, pixels) -> bytearray:
+    """从画布四边出发，把连通的暗像素标成背景。
+
+    不能用「亮度低就当背景」一刀切：币面凹陷处的暗部会被一起挖掉。
+    这里只在能从外面连通进来时才认，币内部再暗也留着。
+    """
+    dark = bytearray(width * height)
+
+    for i in range(width * height):
+        base = i * channels
+        if channels >= 3:
+            luma = (299 * pixels[base] + 587 * pixels[base + 1] + 114 * pixels[base + 2]) // 1000
+        else:
+            luma = pixels[base]
+        if luma < BACKGROUND_LUMA:
+            dark[i] = 1
+
+    stack = []
+    for x in range(width):
+        stack.append(x)
+        stack.append((height - 1) * width + x)
+    for y in range(height):
+        stack.append(y * width)
+        stack.append(y * width + width - 1)
+
+    visited = bytearray(width * height)
+    while stack:
+        index = stack.pop()
+        if visited[index] or not dark[index]:
+            continue
+        visited[index] = 1
+
+        x = index % width
+        if x > 0:
+            stack.append(index - 1)
+        if x < width - 1:
+            stack.append(index + 1)
+        if index >= width:
+            stack.append(index - width)
+        if index + width < width * height:
+            stack.append(index + width)
+
+    return visited
 
 
-def shade(px: float, py: float, scale: float) -> tuple[float, float, float, float]:
-    """算一个像素的颜色。px/py 在设计空间，scale 是「设计单位 → 像素」的比例。"""
-    cx, cy = COIN_CENTER
+# ---------------------------------------------------------------- 重采样
 
-    def px_(value: float) -> float:
-        return value * scale
+def resample(source, source_width: int, source_height: int,
+             target_width: int, target_height: int):
+    """面积平均缩放。source 是预乘 alpha 的 float 列表，每像素 4 个分量。"""
+    horizontal = [0.0] * (target_width * source_height * 4)
 
-    result = (0.0, 0.0, 0.0, 0.0)
+    scale_x = source_width / target_width
+    for y in range(source_height):
+        source_row = y * source_width * 4
+        target_row = y * target_width * 4
 
-    distance = sd_circle(px, py, cx, cy, COIN_RADIUS)
-    if distance > 0:
-        return result
+        for x in range(target_width):
+            start = x * scale_x
+            end = start + scale_x
+            total = 0.0
+            accumulator = [0.0, 0.0, 0.0, 0.0]
 
-    # 1) 外圈：金铜竖直渐变，上亮下暗，像被光照着的金属边
-    vertical = clamp((py - (cy - COIN_RADIUS)) / (2 * COIN_RADIUS))
-    bezel = mix(rgb(BEZEL_LIGHT), rgb(BEZEL_DARK), vertical * 0.9 + 0.05)
-    result = over(result, bezel, cover(px_(distance)))
+            first = int(start)
+            last = min(int(end - 1e-9) + 1, source_width)
+            for i in range(first, last):
+                weight = min(end, i + 1) - max(start, i)
+                if weight <= 0.0:
+                    continue
+                base = source_row + i * 4
+                accumulator[0] += source[base + 0] * weight
+                accumulator[1] += source[base + 1] * weight
+                accumulator[2] += source[base + 2] * weight
+                accumulator[3] += source[base + 3] * weight
+                total += weight
 
-    # 2) 外轮廓线。半宽只跟尺寸走：加固定的像素底会让它在小尺寸下比整条亮边还宽，
-    #    把外圈整个涂黑，金币看着就剩一小圈。
-    result = over(result, rgb(OUTLINE), band(px_(distance), 0.9 * scale + 0.3) * 0.95)
+            base = target_row + x * 4
+            if total > 0.0:
+                horizontal[base + 0] = accumulator[0] / total
+                horizontal[base + 1] = accumulator[1] / total
+                horizontal[base + 2] = accumulator[2] / total
+                horizontal[base + 3] = accumulator[3] / total
 
-    # 3) 外圈与币面之间的凹槽
-    groove_d = abs(sd_circle(px, py, cx, cy, COIN_RADIUS - BEZEL_WIDTH))
-    result = over(result, rgb(GROOVE), band(px_(groove_d), 1.0 * scale) * 0.85)
+    result = [0.0] * (target_width * target_height * 4)
+    scale_y = source_height / target_height
 
-    # 4) 币面：渐变 + 靠边压暗，做出微微隆起的弧度
-    field_d = sd_circle(px, py, cx, cy, FIELD_RADIUS)
-    field_alpha = cover(px_(field_d))
-    if field_alpha > 0:
-        field = mix(rgb(FIELD_LIGHT), rgb(FIELD_DARK), vertical * 0.85)
-        rim = clamp((-field_d) / FIELD_RADIUS)
-        field = mix(field, rgb(FIELD_EDGE), clamp((rim - 0.72) / 0.28) * 0.55)
-        result = over(result, field, field_alpha)
+    for y in range(target_height):
+        start = y * scale_y
+        end = start + scale_y
+        first = int(start)
+        last = min(int(end - 1e-9) + 1, source_height)
 
-    # 5) 潜艇浮雕：先投影，再本体与螺旋桨
-    # 投影：整体往右下错开，看着像凸出版面
-    shadow_d = submarine_distance(px - 2.6, py - 3.0)
-    result = over(result, rgb(RELIEF_EDGE), cover(px_(shadow_d)) * 0.45)
+        for x in range(target_width):
+            total = 0.0
+            accumulator = [0.0, 0.0, 0.0, 0.0]
 
-    body_d = body_distance(px, py)
-    body_alpha = cover(px_(body_d))
-    if body_alpha > 0:
-        relief = mix(rgb(RELIEF_TOP), rgb(RELIEF_BOTTOM), clamp((py - 85.0) / 74.0))
-        result = over(result, relief, body_alpha)
+            for j in range(first, last):
+                weight = min(end, j + 1) - max(start, j)
+                if weight <= 0.0:
+                    continue
+                base = (j * target_width + x) * 4
+                accumulator[0] += horizontal[base + 0] * weight
+                accumulator[1] += horizontal[base + 1] * weight
+                accumulator[2] += horizontal[base + 2] * weight
+                accumulator[3] += horizontal[base + 3] * weight
+                total += weight
 
-        # 左上缘高光：本体减去「往右下偏移后的本体」，剩下的那道月牙就是受光边。
-        # 直接拿偏移后的覆盖度当高光会把整个艇身洗白，纵向渐变全被抹平。
-        lit_d = body_distance(px - 2.0, py - 2.6)
-        result = over(result, rgb(RELIEF_TOP), body_alpha * (1.0 - cover(px_(lit_d))) * 0.75)
-
-    # 螺旋桨用更亮的金属色，否则和艇身同色、糊成一片，尾巴看着是秃的
-    prop_alpha = cover(px_(propeller_distance(px, py)))
-    if prop_alpha > 0:
-        result = over(result, rgb(PROP_LIGHT), prop_alpha)
-        prop_lit = propeller_distance(px - 1.4, py - 1.8)
-        result = over(result, (1.0, 1.0, 1.0), prop_alpha * (1.0 - cover(px_(prop_lit))) * 0.45)
-
-        # 不加描边：潜望镜这类细部件在小尺寸下只有半个像素宽，整根都落在「边缘」上，
-        # 描边会把它们涂成一团黑。立体感交给投影与上缘高光。
-
-    # 6) 舷窗：凸起的小圆环，玻璃反光
-    hole_d = sd_circle(px, py, *PORTHOLE)
-    hole_alpha = cover(px_(hole_d))
-    if hole_alpha > 0:
-        # 环用暗金而不是全黑，否则看着像艇身上破了个洞
-        result = over(result, rgb(RELIEF_BOTTOM), hole_alpha)
-        glass_d = sd_circle(px, py, PORTHOLE[0], PORTHOLE[1], PORTHOLE[2] - 2.6)
-        glass_alpha = cover(px_(glass_d))
-        result = over(result, rgb(RELIEF_TOP), glass_alpha)
-        glint = cover(px_(sd_circle(px, py, PORTHOLE[0] - 2.4, PORTHOLE[1] - 2.6, 2.2))) * 0.9
-        result = over(result, (1.0, 1.0, 1.0), glint * glass_alpha)
+            base = (y * target_width + x) * 4
+            if total > 0.0:
+                result[base + 0] = accumulator[0] / total
+                result[base + 1] = accumulator[1] / total
+                result[base + 2] = accumulator[2] / total
+                result[base + 3] = accumulator[3] / total
 
     return result
 
 
-def render(size: int) -> bytes:
-    """渲染一张 size×size 的 RGBA 原始数据（PNG 行格式，每行前面一个 0 字节）。"""
-    scale = size / DESIGN
-    out = bytearray()
+def prepare(path: str):
+    """抠底、裁到包围盒、补成正方形，返回预乘 alpha 的 float 缓冲。"""
+    width, height, channels, pixels = load_png(path)
+    background = background_mask(width, height, channels, pixels)
 
-    for y in range(size):
-        out.append(0)
-        py = (y + 0.5) / scale
-        for x in range(size):
-            px = (x + 0.5) / scale
-            r, g, b, a = shade(px, py, scale)
-            out += bytes((
-                int(clamp(r) * 255 + 0.5),
-                int(clamp(g) * 255 + 0.5),
-                int(clamp(b) * 255 + 0.5),
-                int(clamp(a) * 255 + 0.5),
-            ))
+    min_x, min_y, max_x, max_y = width, height, -1, -1
+    for y in range(height):
+        for x in range(width):
+            if not background[y * width + x]:
+                if x < min_x:
+                    min_x = x
+                if x > max_x:
+                    max_x = x
+                if y < min_y:
+                    min_y = y
+                if y > max_y:
+                    max_y = y
 
-    return bytes(out)
+    if max_x < 0:
+        raise SystemExit(f"{path} 抠完底什么都不剩，检查背景阈值")
+
+    box_width = max_x - min_x + 1
+    box_height = max_y - min_y + 1
+    side = max(box_width, box_height)
+
+    # 正方形画布，四周按像素留白
+    canvas = int(round(side / (1.0 - 2.0 * MARGIN)))
+    offset_x = (canvas - box_width) // 2
+    offset_y = (canvas - box_height) // 2
+
+    print(f"源图 {width}×{height}，币体 {box_width}×{box_height}，画布 {canvas}×{canvas}")
+
+    buffer = [0.0] * (canvas * canvas * 4)
+    for y in range(box_height):
+        source_y = min_y + y
+        target_y = offset_y + y
+        for x in range(box_width):
+            source_x = min_x + x
+            index = source_y * width + source_x
+            if background[index]:
+                continue
+
+            base = index * channels
+            if channels >= 3:
+                red, green, blue = pixels[base], pixels[base + 1], pixels[base + 2]
+            else:
+                red = green = blue = pixels[base]
+            alpha = pixels[base + 3] / 255.0 if channels == 4 else 1.0
+            if alpha <= 0.0:
+                continue
+
+            target = (target_y * canvas + offset_x + x) * 4
+            # 预乘：透明处的黑色不会渗进边缘
+            buffer[target + 0] = red * alpha
+            buffer[target + 1] = green * alpha
+            buffer[target + 2] = blue * alpha
+            buffer[target + 3] = alpha
+
+    return buffer, canvas
 
 
 # ---------------------------------------------------------------- 出图
 
-def png_bytes(size: int, raw: bytes) -> bytes:
+def to_rgba(buffer, width: int, height: int) -> bytes:
+    """预乘还原成直通 alpha 的 RGBA 字节。"""
+    out = bytearray(width * height * 4)
+    for i in range(width * height):
+        base = i * 4
+        alpha = buffer[base + 3]
+        if alpha <= 0.0:
+            continue
+        out[base + 0] = min(255, int(buffer[base + 0] / alpha + 0.5))
+        out[base + 1] = min(255, int(buffer[base + 1] / alpha + 0.5))
+        out[base + 2] = min(255, int(buffer[base + 2] / alpha + 0.5))
+        out[base + 3] = min(255, int(alpha * 255.0 + 0.5))
+    return bytes(out)
+
+
+def png_bytes(size: int, rgba: bytes) -> bytes:
     def chunk(tag: bytes, data: bytes) -> bytes:
         return (struct.pack(">I", len(data)) + tag + data
                 + struct.pack(">I", zlib.crc32(tag + data) & 0xFFFFFFFF))
 
+    raw = bytearray()
+    stride = size * 4
+    for y in range(size):
+        raw.append(0)
+        raw += rgba[y * stride:(y + 1) * stride]
+
     header = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)
     return (b"\x89PNG\r\n\x1a\n"
             + chunk(b"IHDR", header)
-            + chunk(b"IDAT", zlib.compress(raw, 9))
+            + chunk(b"IDAT", zlib.compress(bytes(raw), 9))
             + chunk(b"IEND", b""))
 
 
 def ico_bytes(images: dict[int, bytes]) -> bytes:
-    """ICO 容器，每项都存 PNG（Windows Vista 以后都认）。"""
     entries = []
     offset = 6 + 16 * len(images)
     for size in sorted(images):
@@ -314,7 +371,7 @@ def ico_bytes(images: dict[int, bytes]) -> bytes:
     return out
 
 
-def sheet(sizes=(256, 64, 48, 32, 24, 16)) -> bytes:
+def sheet(images: dict[int, bytes], sizes=(256, 64, 48, 32, 24, 16)) -> bytes:
     """浅色与深色背景的尺寸对照图。图标在两种底上都得能看。"""
     light = (244, 246, 248)
     dark = (26, 30, 36)
@@ -328,31 +385,28 @@ def sheet(sizes=(256, 64, 48, 32, 24, 16)) -> bytes:
         for x in range(width // 2, width):
             canvas[y][x] = (*dark, 255)
 
-    rendered = {size: render(size) for size in sizes}
-
     def blit(size: int, left: int, top: int) -> None:
-        raw = rendered[size]
-        stride = size * 4 + 1
+        rgba = images[size]
         for y in range(size):
             for x in range(size):
-                i = y * stride + 1 + x * 4
-                r, g, b, a = raw[i], raw[i + 1], raw[i + 2], raw[i + 3]
-                if a == 0:
+                base = (y * size + x) * 4
+                alpha = rgba[base + 3]
+                if alpha == 0:
                     continue
-                dst = canvas[top + y][left + x]
-                t = a / 255.0
+                target = canvas[top + y][left + x]
+                t = alpha / 255.0
                 canvas[top + y][left + x] = (
-                    int(r * t + dst[0] * (1 - t) + 0.5),
-                    int(g * t + dst[1] * (1 - t) + 0.5),
-                    int(b * t + dst[2] * (1 - t) + 0.5),
+                    int(rgba[base + 0] * t + target[0] * (1 - t) + 0.5),
+                    int(rgba[base + 1] * t + target[1] * (1 - t) + 0.5),
+                    int(rgba[base + 2] * t + target[2] * (1 - t) + 0.5),
                     255,
                 )
 
     blit(big, pad, pad)
     blit(big, width // 2 + pad, pad)
 
-    for base in (pad, width // 2 + pad):
-        x = base
+    for base_x in (pad, width // 2 + pad):
+        x = base_x
         for size in sizes[1:]:
             blit(size, x, pad + big - size + 8)
             x += size + 18
@@ -360,44 +414,55 @@ def sheet(sizes=(256, 64, 48, 32, 24, 16)) -> bytes:
     raw = bytearray()
     for row in canvas:
         raw.append(0)
-        for r, g, b, a in row:
-            raw += bytes((r, g, b, a))
+        for red, green, blue, alpha in row:
+            raw += bytes((red, green, blue, alpha))
     return png_bytes(width, raw)
 
 
-def preview(size: int = 32) -> None:
-    """终端里的 ASCII 预览：按亮度分档，够看出轮廓与留白。"""
-    raw = render(size)
+def preview(images: dict[int, bytes], size: int = 32) -> None:
+    rgba = images[size]
     ramp = " .:-=+*#%@"
-    stride = size * 4 + 1
     print(f"--- {size}×{size} 预览 ---")
     for y in range(size):
         line = []
         for x in range(size):
-            i = y * stride + 1 + x * 4
-            r, g, b, a = raw[i], raw[i + 1], raw[i + 2], raw[i + 3]
-            if a < 24:
+            base = (y * size + x) * 4
+            alpha = rgba[base + 3]
+            if alpha < 24:
                 line.append(" ")
                 continue
-            lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255.0
-            line.append(ramp[int(clamp(lum) * (len(ramp) - 1))])
+            luma = (299 * rgba[base] + 587 * rgba[base + 1] + 114 * rgba[base + 2]) / 255000.0
+            line.append(ramp[int(min(max(luma, 0.0), 1.0) * (len(ramp) - 1))])
         print("".join(line))
 
 
 def main() -> int:
     here = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    source = os.path.join(here, SOURCE)
+    if not os.path.exists(source):
+        raise SystemExit(f"找不到源图 {source}")
+
+    buffer, canvas = prepare(source)
+    master = resample(buffer, canvas, canvas, LARGEST, LARGEST)
+    master_rgba = to_rgba(master, LARGEST, LARGEST)
+
+    images = {}
+    for size in SIZES:
+        if size == LARGEST:
+            images[size] = master_rgba
+        else:
+            images[size] = to_rgba(resample(master, LARGEST, LARGEST, size, size), size, size)
+
     assets = os.path.join(here, "src", "FFXIVSubmarineLedger.Desktop", "Assets")
     os.makedirs(assets, exist_ok=True)
 
-    images = {size: png_bytes(size, render(size)) for size in SIZES}
-
     ico_path = os.path.join(assets, "app.ico")
     with open(ico_path, "wb") as handle:
-        handle.write(ico_bytes(images))
+        handle.write(ico_bytes({size: png_bytes(size, images[size]) for size in SIZES}))
 
     png_path = os.path.join(assets, "app.png")
     with open(png_path, "wb") as handle:
-        handle.write(images[256])
+        handle.write(png_bytes(LARGEST, images[LARGEST]))
 
     print(f"写入 {ico_path}（{len(SIZES)} 个尺寸，{os.path.getsize(ico_path)} 字节）")
     print(f"写入 {png_path}（{os.path.getsize(png_path)} 字节）")
@@ -408,18 +473,18 @@ def main() -> int:
 
         icon_png = os.path.join(docs, "icon.png")
         with open(icon_png, "wb") as handle:
-            handle.write(images[256])
+            handle.write(png_bytes(LARGEST, images[LARGEST]))
 
         sheet_path = os.path.join(docs, "icon-sizes.png")
         with open(sheet_path, "wb") as handle:
-            handle.write(sheet())
+            handle.write(sheet(images))
 
         print(f"写入 {icon_png}（{os.path.getsize(icon_png)} 字节）")
         print(f"写入 {sheet_path}（{os.path.getsize(sheet_path)} 字节）")
 
     if "--preview" in sys.argv:
-        preview(32)
-        preview(16)
+        preview(images, 32)
+        preview(images, 16)
 
     return 0
 
