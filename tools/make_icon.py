@@ -47,16 +47,18 @@ PROP_LIGHT = "#FFF8DC"
 RELIEF_BOTTOM = "#E2C079"
 RELIEF_EDGE = "#4A3418"
 
-# 潜艇浮雕：艇身、指挥塔、潜望镜、螺旋桨
-# 艇身右端收在 184、桨毂放 192：中间留一道窄缝，不然螺旋桨会被艇身吞掉
-# （胶囊的端头是圆的，半径会多伸出 24，之前桨毂整个落在艇身里）。
-# 「含螺旋桨」的轮廓要正好落在圆心，币面才不会一半空一半挤。
-HULL = (70.0, 141.0, 156.0, 141.0, 24.0)
-TOWER = (110.0, 118.0, 138.0, 118.0, 12.5)
-PERISCOPE = (124.0, 105.0, 124.0, 92.0, 3.8)
-PERISCOPE_HEAD = (124.0, 92.0, 135.0, 92.0, 3.0)
-PROP_HUB = (194.0, 141.0, 6.5)
-PORTHOLE = (86.0, 141.0, 10.0)
+# 潜艇浮雕。参考真实潜艇侧影：细长圆柱艇身、圆头、尾部收细成锥、
+# 前三分之一处一座矩形指挥塔带潜望镜、尾端两叶桨。
+# 比例约 5.5:1——真实的约 11:1，但那样在 32 px 下只剩一条线，读不出来。
+HULL_BODY = (64.0, 142.0, 150.0, 142.0, 15.5)        # 平行中体
+HULL_TAIL = (150.0, 142.0, 198.0, 142.0, 15.5, 2.5)  # 锥形尾段
+SAIL = (86.0, 111.0, 15.0, 18.0, 3.5)                # 指挥塔：中心、半宽、半高、圆角
+MASTS = ((79.0, 95.0, 79.0, 81.0, 2.2),
+         (93.0, 95.0, 93.0, 81.0, 2.2))              # 两根潜望镜
+PROP_HUB = (204.0, 142.0, 5.0)
+PROP_BLADES = ((204.0, 142.0, 204.0, 128.0, 4.0),
+               (204.0, 142.0, 204.0, 156.0, 4.0))    # 两叶桨，侧视就是一条竖线
+PORTHOLE = (62.0, 142.0, 7.5)
 
 # 桨叶：一根朝下、两根朝上斜，侧视下最像螺旋桨
 PROP_ANGLES = (90.0, 210.0, 330.0)
@@ -107,6 +109,40 @@ def sd_circle(px, py, cx, cy, radius):
     return math.hypot(px - cx, py - cy) - radius
 
 
+def sd_round_rect(px, py, cx, cy, half_w, half_h, radius):
+    qx = abs(px - cx) - (half_w - radius)
+    qy = abs(py - cy) - (half_h - radius)
+    return math.hypot(max(qx, 0.0), max(qy, 0.0)) + min(max(qx, qy), 0.0) - radius
+
+
+def sd_round_cone(px, py, ax, ay, bx, by, radius_a, radius_b):
+    """两端半径不同的「胶囊」，用来画潜艇收细的尾段。"""
+    bax, bay = bx - ax, by - ay
+    length2 = bax * bax + bay * bay
+    difference = radius_a - radius_b
+    a2 = length2 - difference * difference
+    inverse = 1.0 / length2
+
+    pax, pay = px - ax, py - ay
+    along = pax * bax + pay * bay
+    past = along - length2
+
+    x2 = (pax * length2 - bax * along) ** 2 + (pay * length2 - bay * along) ** 2
+    y2 = along * along * length2
+    z2 = past * past * length2
+
+    # 判据是 sign(rr)·rr²·x²，不是 a2²·x²。写成后者的话尾段整段被判到外面，
+    # 收细的锥形根本画不出来。
+    k = (1 if difference > 0 else -1) * difference * difference * x2
+
+    if (1 if past > 0 else -1) * a2 * z2 > k:
+        return math.sqrt(x2 + z2) * inverse - radius_b
+    if (1 if along > 0 else -1) * a2 * y2 < k:
+        return math.sqrt(x2 + y2) * inverse - radius_a
+
+    return (math.sqrt(x2 * a2 * inverse) + along * difference) * inverse - radius_a
+
+
 def cover(d_px: float) -> float:
     """距离（像素）转覆盖度，1 px 宽的过渡带就是抗锯齿。"""
     return clamp(0.5 - d_px)
@@ -120,24 +156,25 @@ def band(d_px: float, half_width: float) -> float:
 # ---------------------------------------------------------------- 画面
 
 def body_distance(px: float, py: float) -> float:
-    """艇身、指挥塔、潜望镜。"""
-    return min(
-        sd_capsule(px, py, *HULL),
-        sd_capsule(px, py, *TOWER),
-        sd_capsule(px, py, *PERISCOPE),
-        sd_capsule(px, py, *PERISCOPE_HEAD),
+    """艇身（平行中体 + 锥形尾段）、指挥塔、潜望镜。"""
+    d = min(
+        sd_capsule(px, py, *HULL_BODY),
+        sd_round_cone(px, py, *HULL_TAIL),
+        sd_round_rect(px, py, *SAIL),
     )
+
+    for mast in MASTS:
+        d = min(d, sd_capsule(px, py, *mast))
+
+    return d
 
 
 def propeller_distance(px: float, py: float) -> float:
-    """桨毂与三片桨叶。单独算，因为它用更亮的金属色，不然和艇身糊成一片。"""
+    """桨毂与两叶桨。单独算，因为它用更亮的金属色，不然和艇身糊成一片。"""
     d = sd_circle(px, py, *PROP_HUB)
 
-    for angle in PROP_ANGLES:
-        radians = math.radians(angle)
-        bx = PROP_HUB[0] + math.cos(radians) * PROP_BLADE_LENGTH
-        by = PROP_HUB[1] + math.sin(radians) * PROP_BLADE_LENGTH
-        d = min(d, sd_capsule(px, py, PROP_HUB[0], PROP_HUB[1], bx, by, PROP_BLADE_RADIUS))
+    for blade in PROP_BLADES:
+        d = min(d, sd_capsule(px, py, *blade))
 
     return d
 
@@ -190,7 +227,7 @@ def shade(px: float, py: float, scale: float) -> tuple[float, float, float, floa
     body_d = body_distance(px, py)
     body_alpha = cover(px_(body_d))
     if body_alpha > 0:
-        relief = mix(rgb(RELIEF_TOP), rgb(RELIEF_BOTTOM), clamp((py - 88.0) / 77.0))
+        relief = mix(rgb(RELIEF_TOP), rgb(RELIEF_BOTTOM), clamp((py - 85.0) / 74.0))
         result = over(result, relief, body_alpha)
 
         # 左上缘高光：本体减去「往右下偏移后的本体」，剩下的那道月牙就是受光边。
