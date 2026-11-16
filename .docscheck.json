@@ -1,0 +1,3 @@
+{
+  "root_docs_allow": ["PLAN.md", "ENGINEERING.md", "test-notes.md"]
+}
