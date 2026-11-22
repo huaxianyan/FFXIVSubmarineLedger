@@ -5,10 +5,14 @@
 - 版本号唯一来源是 `Directory.Build.props` 的 `<Version>`。
 - 发布说明必须有：`docs/release-notes/v<版本>.md`，按 `release-notes-standard` 写。
 - 构建与测试：`dotnet build FFXIVSubmarineLedger.sln`、`dotnet test FFXIVSubmarineLedger.sln`。
+- NuGet 审计（NU1903）会把已知漏洞当错误，依赖版本住了就得升级，不要用 `-p:NuGetAudit=false` 绕。
 
 ## 产物
 
-- `powershell -File tools/publish.ps1` → `artifacts/FFXIVSubmarineLedger-<版本>.zip` + `.sha256`（自包含目录包，约 54 MB）。
+- `powershell -File tools/publish.ps1` → `artifacts/FFXIVSubmarineLedger-<版本>.zip` + `.sha256`（自包含目录包，约 59 MB）。
+- 本机执行策略未设（等同 Restricted），跑脚本得加 `-ExecutionPolicy Bypass`：
+  `powershell -NoProfile -ExecutionPolicy Bypass -File tools/publish.ps1`。
+- 脚本发现同名进程在跑就拒绝打包。用户装着旧版且正在用的时候（它跑在别的目录，互不影响），要么让用户关掉，要么单独跑一遍脚本里的命令，别直接杀掉用户的实例。
 - 产物名不带架构段，只出 win-x64 一个包。
 - 给人用的目录是解压出来的 `artifacts/run`。`artifacts/publish` 是打包中转目录，脚本每次整个删掉重建，别在里面直接跑 exe。
 
@@ -20,4 +24,5 @@
 
 ## 已发布
 
+- v0.1.1（2026-11-22，只修识别与依赖漏洞，zip + sha256 两个附件）。
 - v0.1.0（2026-11-02，首个正式版，zip + sha256 两个附件）。`/releases/latest` 已有内容，应用内更新检查不再回 404。
