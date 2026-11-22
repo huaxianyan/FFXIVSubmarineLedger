@@ -15,6 +15,11 @@ public sealed class JapaneseLogLineParserTests
     [InlineData("[11:41] テストさんは pルビー※ 30を入手した。", "ルビー", 30)]
     [InlineData("[11:41] テストさんは pエメラルド29を入手 した。", "エメラルド", 29)]
     [InlineData("[11:41] テストさんは p沈没船の指輪 X4を入手した。", "沈没船の指輪", 4)]
+    // 2026-11-22 的真实截图：▶ 被读成「5」「5p」，× 被读成「メ」「ぶ」。
+    [InlineData("[11:41] テストさんは 5ルビーメ27を入手した。", "ルビー", 27)]
+    [InlineData("[11:41] テストさんは 5pエメラルドで 30を入手した。", "エメラルド", 30)]
+    [InlineData("[11:41] テストさんは pルビー※ぶ27を入手した。", "ルビー", 27)]
+    [InlineData("[11:41] テストさんは 5スターサファイアメメ27を入手した。", "スターサファイア", 27)]
     public void TryParse_ReadsItemAndQuantityThroughOcrNoise(string line, string item, int quantity)
     {
         Assert.True(JapaneseLogLineParser.TryParse(line, out LootLine parsed));
@@ -50,6 +55,9 @@ public sealed class JapaneseLogLineParserTests
 
     [Theory]
     [InlineData("[11:40] 潜水艦「Strawberry」の探索完了を確認しました", "Strawberry")]
+    // 日志窗口底部压在亮色场景上的那几行带半透明，OCR 常把第一个字读错，艇名照样得读出来。
+    [InlineData("[11:41] 替水艦「Cranberry」の探索完了を確認しました", "Cranberry")]
+    [InlineData("[11:41] 深水艦「Cranberry」の探索完了を確認しました", "Cranberry")]
     // 解析前会去掉空白，所以带空格的艇名读出来是不带空格的；归属判定用同一套规则，不受影响。
     [InlineData("[11:41] 潜水艦「Black berry」の探索完了を確認しました。", "Blackberry")]
     public void TryParseSubmarineReturn_ReadsTheSubmarineName(string line, string expected)

@@ -22,8 +22,11 @@ public static class JapaneseLogLineParser
 {
     private const string LootAnchor = "を入手";
 
-    /// <summary>乘号被 OCR 读成的各种样子。</summary>
-    private const string TimesNoise = "×XxｘⅩ*＊・･※";
+    /// <summary>
+    /// 乘号被 OCR 读成的各种样子。假名那几个（<c>メ</c>、<c>ぶ</c>）是 2026-11-22 的真实样本里
+    /// 看到的：乘号字形细、又有斜度，常被读成片假名 <c>メ</c>。只有样本里真出现过才往里加。
+    /// </summary>
+    private const string TimesNoise = "×XxｘⅩ*＊・･※メぶ";
 
     /// <summary>
     /// HQ 标记 <c>◉</c> 被读成的样子。只在「物名后、数量前」这一小段上剥，
@@ -32,8 +35,15 @@ public static class JapaneseLogLineParser
     /// </summary>
     private const string HighQualityNoise = "◉⦿ぐでゅ";
 
-    /// <summary>物名前面的物品链接标记。</summary>
-    private const string LinkMarkers = "▶►▸▷pb";
+    /// <summary>
+    /// 物名前面的物品链接标记 <c>▶</c> 会被 OCR 读成 <c>5</c>、<c>p</c>、<c>pg</c>、<c>5p</c> 等任意样子，
+    /// 逐一列举只会永远追不上，所以按「日文物名一律以假名或汉字起头」直接跳到第一个假名/汉字。
+    /// </summary>
+    private static bool IsItemNameStart(char c) =>
+        c is >= '\u3041' and <= '\u3096'     // 平假名
+            or >= '\u30A1' and <= '\u30FA'   // 片假名
+            or >= '\u4E00' and <= '\u9FFF'   // 汉字
+            or '\u3005' or '\u3006' or '\u30F6'; // 々 〆 ヶ
 
     /// <summary>
     /// 聊天框直读时 HQ 写成物名后缀 <c>[HQ]</c>（截图里的渲染是 <c>◉</c>）。
@@ -44,7 +54,12 @@ public static class JapaneseLogLineParser
     /// <summary>角色名最多这么长，再往后出现的「は」属于物名。</summary>
     private const int ActorNameLimit = 40;
 
-    private const string SubmarinePrefix = "潜水艦「";
+    /// <summary>
+    /// 只认「水艦「」不认完整的「潜水艦「」：日志窗口底部那几行压在亮色场景上、
+    /// 带半透明，OCR 常把第一个字读错（实测读成「替」「深」），而「水艦「」+「」の探索完了」
+    /// 这个组合在日志里只属于这一行，少认一个字不影响唯一性。
+    /// </summary>
+    private const string SubmarinePrefix = "水艦「";
     private const string SubmarineReturnMarker = "」の探索完了";
 
     public static bool TryParse(string line, out LootLine parsed)
@@ -104,7 +119,7 @@ public static class JapaneseLogLineParser
         if (!TryDropActorPrefix(rest, out rest))
             return false;
 
-        rest = rest.TrimStart(LinkMarkers.ToCharArray());
+        rest = TrimLeadingLinkNoise(rest);
 
         foreach (string suffix in HighQualitySuffixes)
         {
@@ -149,6 +164,19 @@ public static class JapaneseLogLineParser
 
         submarineName = text[nameStart..nameEnd].Trim();
         return submarineName.Length > 0;
+    }
+
+    /// <summary>
+    /// 削掉物名前面的链接标记噪声。整串都被削空时原样返回——这种行该以「未命中」露出来
+    /// 让人看见，而不是当成解析失败悄悄丢掉。
+    /// </summary>
+    private static string TrimLeadingLinkNoise(string text)
+    {
+        int start = 0;
+        while (start < text.Length && !IsItemNameStart(text[start]))
+            start++;
+
+        return start == text.Length ? text : text[start..];
     }
 
     /// <summary>去掉时间戳与「角色名は」，只留物名起的部分。找不到「は」时返回 false。</summary>

@@ -9,6 +9,15 @@ public sealed class TextLineOptions
     /// <summary>算作「文字像素」的亮度下限。日志字是白色带黑描边，200 能把字和大部分场景分开。</summary>
     public byte BrightnessThreshold { get; init; } = 200;
 
+    /// <summary>
+    /// 算作「描边」的亮度上限。亮像素上下这么深才算日志字——亮色场景里没有这么深的像素，
+    /// 靠这一条把成片的亮背景（地板、招牌）挡在外面。
+    /// </summary>
+    public byte OutlineThreshold { get; init; } = 90;
+
+    /// <summary>往上往下各找几像素内的描边。日志字笔画 2–3 px 宽，2 足够且不至于把行距误当成描边。</summary>
+    public int OutlineRadius { get; init; } = 2;
+
     /// <summary>一行里至少要有这么多文字像素才算文本行，用来滤掉零星高光。</summary>
     public int MinPixelsPerRow { get; init; } = 5;
 
