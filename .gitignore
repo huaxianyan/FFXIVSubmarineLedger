@@ -30,8 +30,9 @@ publish/
 logs/
 .local/
 
-# Local agent workspace data
+# Local agent workspace data（临时产物一律放项目里的 work/，见本机 machine/AGENTS.md）
 .workbuddy-ai/
+work/
 
 # 真机截图等本地开发素材，含角色名与部队信息，不入库
 dev/
