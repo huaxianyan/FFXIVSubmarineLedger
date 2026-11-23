@@ -166,16 +166,17 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     public bool HasStatus => StatusMessage.Length > 0;
 
+    /// <summary>目标角色名下已有的艇名，用来把 OCR 读歪的艇名对回去。每次识别、落库前刷新。</summary>
+    private IReadOnlyList<string> _knownSubmarines = [];
+
     /// <summary>这笔收益会记到谁名下。</summary>
-    public string TargetCharacterLabel
-    {
-        get
-        {
-            CharacterRowViewModel? target =
-                Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
-            return target is null ? Loc.Get("status.noCharacterHint") : target.DisplayName;
-        }
-    }
+    public string TargetCharacterLabel => TargetCharacter is { } target
+        ? target.DisplayName
+        : Loc.Get("status.noCharacterHint");
+
+    /// <summary>落库与归属解析的目标角色：默认角色，没有就取第一个。</summary>
+    private CharacterRowViewModel? TargetCharacter =>
+        Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
 
     [RelayCommand]
     private Task ReadClipboard() => ReadFromClipboardAsync();
@@ -385,6 +386,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
             IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog.Value);
 
+            await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
             ReplaceRows(loot);
 
             StatusMessage = loot.Count == 0
@@ -455,7 +457,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
                 if (lines.Count > 0)
                 {
-                    IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
+                    IReadOnlyList<RecognizedLoot> added = await MergeChatLinesAsync(lines).ConfigureAwait(true);
                     OcrSummary = Loc.Format("records.watchSummary", lines.Count);
 
                     if (added.Count > 0)
@@ -493,7 +495,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// 所以必须去重；去重键是「艇名 + 原始行」（`LootAccumulator`），不能按「同一句话
     /// 出现过几次」算——同名道具分属两艘艇时会被并成一条。
     /// </summary>
-    private IReadOnlyList<RecognizedLoot> MergeChatLines(IReadOnlyList<string> lines)
+    private async Task<IReadOnlyList<RecognizedLoot>> MergeChatLinesAsync(IReadOnlyList<string> lines)
     {
         // 归属必须在**整段有序缓冲**上算：只看新出现的那几行，往往拿不到后面那行「探索完了」，
         // 归属就会从错误的上文里算出来（实测把 Cranberry 的一笔记到了 Blackberry）。
@@ -503,12 +505,16 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         if (loot.Count == 0)
             return [];
 
-        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(loot);
+        await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
+
+        var ambiguous = new List<string>();
+        IReadOnlyList<ResolvedLoot> resolved = ResolveSubmarines(loot, ambiguous);
+        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(resolved, ambiguous);
 
         // 只追加，不清空：用户可能已经改过前面几行的数量或品质。
-        foreach (RecognizedLoot entry in loot)
+        foreach (ResolvedLoot entry in resolved)
         {
-            LootRowViewModel row = new(entry, choices);
+            LootRowViewModel row = new(entry.Loot, choices, entry.SubmarineNote);
             row.PropertyChanged += OnLootRowChanged;
             LootRows.Add(row);
         }
@@ -546,7 +552,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             OcrText = string.Join(Environment.NewLine, lines);
             OcrSummary = Loc.Format("records.chatSummary", lines.Count);
 
-            IReadOnlyList<RecognizedLoot> added = MergeChatLines(lines);
+            IReadOnlyList<RecognizedLoot> added = await MergeChatLinesAsync(lines).ConfigureAwait(true);
             int unknown = added.Count(x => !x.IsKnown);
             string unknownNote = unknown > 0 ? Loc.Format("records.chatUnknownNote", unknown) : string.Empty;
 
@@ -566,12 +572,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     private void ReplaceRows(IReadOnlyList<RecognizedLoot> loot)
     {
-        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(loot);
+        var ambiguous = new List<string>();
+        IReadOnlyList<ResolvedLoot> resolved = ResolveSubmarines(loot, ambiguous);
+        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(resolved, ambiguous);
 
         LootRows.Clear();
-        foreach (RecognizedLoot entry in loot)
+        foreach (ResolvedLoot entry in resolved)
         {
-            LootRowViewModel row = new(entry, choices);
+            LootRowViewModel row = new(entry.Loot, choices, entry.SubmarineNote);
             row.PropertyChanged += OnLootRowChanged;
             LootRows.Add(row);
         }
@@ -580,22 +588,80 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 确认行里可选的艇：本批出现过的艇 + 「未标明艇」。
-    /// 识别把两艘艇的收益串在一起时，用户能在这里改回去。
+    /// 把读出来的艇名对回角色名下已有的艇。
+    ///
+    /// 不对回去就会凭空造艇：实测 2026-11-22 的一次截图把 Strawberry / Blackberry / Blueberry
+    /// 读成 Strawberrv / Blackberrvy / Blug5erry，一落库就多了三艘各一条记录的艇。
+    /// 近到分不清时不替人猜，也不新建：置为未标明，把那几个候选塞进可选列表并给出提示。
     /// </summary>
-    private static IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(IReadOnlyList<RecognizedLoot> loot)
+    private IReadOnlyList<ResolvedLoot> ResolveSubmarines(IReadOnlyList<RecognizedLoot> loot, List<string> ambiguousNames)
+    {
+        List<ResolvedLoot> resolved = new(loot.Count);
+
+        foreach (RecognizedLoot entry in loot)
+        {
+            SubmarineNameGuess guess = SubmarineNameMatcher.Guess(entry.SubmarineName, _knownSubmarines);
+
+            switch (guess.Kind)
+            {
+                case SubmarineNameKind.Corrected:
+                    resolved.Add(new ResolvedLoot(
+                        entry with { SubmarineName = guess.Name },
+                        Loc.Format("records.subCorrected", entry.SubmarineName!, guess.Name!)));
+                    break;
+
+                case SubmarineNameKind.Ambiguous:
+                    ambiguousNames.AddRange(guess.NearNames);
+                    resolved.Add(new ResolvedLoot(
+                        entry with { SubmarineName = null },
+                        Loc.Format("records.subAmbiguous", entry.SubmarineName!, string.Join(" / ", guess.NearNames))));
+                    break;
+
+                default:
+                    resolved.Add(new ResolvedLoot(entry, string.Empty));
+                    break;
+            }
+        }
+
+        return resolved;
+    }
+
+    /// <summary>
+    /// 确认行里可选的艇：角色名下已有的 + 本批新出现的 + 「未标明」，「分不清」时的候选也在里面。
+    /// 识别把两艘艇的收益串在一起、或者艇名读歪了，用户能在这里改回去。
+    /// </summary>
+    private IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(
+        IReadOnlyList<ResolvedLoot> loot,
+        IEnumerable<string> ambiguousNames)
     {
         List<SubmarineChoice> choices = [new(string.Empty)];
 
-        choices.AddRange(loot
-            .Select(x => x.SubmarineName)
-            .Where(name => name is { Length: > 0 })
+        choices.AddRange(_knownSubmarines
+            .Concat(ambiguousNames)
+            .Concat(loot.Select(x => x.Loot.SubmarineName).OfType<string>())
+            .Where(name => name.Length > 0)
             .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal)
-            .Select(name => new SubmarineChoice(name!)));
+            .Select(name => new SubmarineChoice(name)));
 
         return choices;
     }
+
+    /// <summary>刷新目标角色名下已有的艇名。</summary>
+    private async Task RefreshKnownSubmarinesAsync()
+    {
+        if (TargetCharacter is not { } target)
+        {
+            _knownSubmarines = [];
+            return;
+        }
+
+        IReadOnlyList<Submarine> submarines = await _submarines.ListAsync(target.Id).ConfigureAwait(true);
+        _knownSubmarines = [.. submarines.Select(x => x.Name)];
+    }
+
+    /// <summary>一行确认记录，连同它的艇名提示（艇名读歪了、分不清时非空）。</summary>
+    private sealed record ResolvedLoot(RecognizedLoot Loot, string SubmarineNote);
 
     private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLootTotals();
 
@@ -662,6 +728,10 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
         DateOnly date = DateOnly.FromDateTime(DateTime.Now);
 
+        // 落库前再刷新一次、再对一次已有的艇：界面上的解析可能是几分钟前的状态，
+        // 并且这里是对「凭空造出一艘新艇」的最后一道关。
+        await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
+
         try
         {
             int records = 0;
@@ -674,11 +744,15 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
                 if (group.Key is { Length: > 0 } name)
                 {
-                    Submarine? submarine = await _submarines.FindByNameAsync(target.Id, name).ConfigureAwait(true);
+                    SubmarineNameGuess guess = SubmarineNameMatcher.Guess(name, _knownSubmarines);
+                    string effective = guess.Name ?? name;
+
+                    Submarine? submarine = await _submarines.FindByNameAsync(target.Id, effective).ConfigureAwait(true);
                     if (submarine is null)
                     {
-                        submarine = new Submarine { CharacterId = target.Id, Name = name };
+                        submarine = new Submarine { CharacterId = target.Id, Name = effective };
                         await _submarines.AddAsync(submarine).ConfigureAwait(true);
+                        _knownSubmarines = [.. _knownSubmarines, effective];
                     }
 
                     submarineId = submarine.Id;

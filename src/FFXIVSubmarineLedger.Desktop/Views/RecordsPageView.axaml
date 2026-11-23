@@ -107,6 +107,25 @@
                                                 </DataTemplate>
                                             </ComboBox.ItemTemplate>
                                         </ComboBox>
+
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock FontSize="11" Opacity="0.6" VerticalAlignment="Center"
+                                                       Text="{loc:Tr records.submarineCaption}" />
+                                            <ComboBox FontSize="11" MinWidth="150"
+                                                      ItemsSource="{Binding SubmarineChoices}"
+                                                      SelectedItem="{Binding SelectedSubmarine}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:SubmarineChoice">
+                                                        <TextBlock FontSize="11" Text="{Binding Label}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+                                        </StackPanel>
+
+                                        <TextBlock FontSize="11" Opacity="0.75" TextWrapping="Wrap"
+                                                   Foreground="#C08030"
+                                                   IsVisible="{Binding HasSubmarineNote}"
+                                                   Text="{Binding SubmarineNote}" />
                                     </StackPanel>
 
                                     <NumericUpDown Grid.Column="2" Width="104" Minimum="1" Increment="1"

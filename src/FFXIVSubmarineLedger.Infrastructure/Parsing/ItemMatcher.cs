@@ -1,4 +1,5 @@
 using FFXIVSubmarineLedger.Domain.Catalog;
+using FFXIVSubmarineLedger.Domain.Texts;
 
 namespace FFXIVSubmarineLedger.Infrastructure.Parsing;
 
@@ -40,7 +41,7 @@ public static class ItemMatcher
         foreach (LootCatalogEntry entry in entries)
         {
             // 收集时日志可能是任一语言，所以在该道具的所有写法里取最近的那个。
-            int distance = entry.AllNames.Min(name => Levenshtein(normalized, Normalize(name)));
+            int distance = entry.AllNames.Min(name => TextDistance.Levenshtein(normalized, Normalize(name)));
             if (distance > limit)
                 continue;
 
@@ -83,39 +84,5 @@ public static class ItemMatcher
         }
 
         return builder.ToString();
-    }
-
-    /// <summary>编辑距离（插入、删除、替换各计 1）。</summary>
-    private static int Levenshtein(string left, string right)
-    {
-        if (left.Length == 0)
-            return right.Length;
-
-        if (right.Length == 0)
-            return left.Length;
-
-        // 物名只有几十条、每条一二十字，直接用数组，不玩缓冲区复用。
-        int[] previous = new int[right.Length + 1];
-        int[] current = new int[right.Length + 1];
-
-        for (int j = 0; j <= right.Length; j++)
-            previous[j] = j;
-
-        for (int i = 1; i <= left.Length; i++)
-        {
-            current[0] = i;
-
-            for (int j = 1; j <= right.Length; j++)
-            {
-                int cost = left[i - 1] == right[j - 1] ? 0 : 1;
-                current[j] = Math.Min(
-                    Math.Min(current[j - 1] + 1, previous[j] + 1),
-                    previous[j - 1] + cost);
-            }
-
-            (previous, current) = (current, previous);
-        }
-
-        return previous[right.Length];
     }
 }

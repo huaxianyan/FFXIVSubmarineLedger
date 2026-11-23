@@ -16,10 +16,15 @@ public sealed partial class LootRowViewModel : ObservableObject
     private readonly IReadOnlyList<LootCatalogEntry> _candidates;
 
     /// <param name="loot">识别结果。</param>
-    /// <param name="submarineChoices">本次读取里出现过的艇，供人工纠正归属。</param>
-    public LootRowViewModel(RecognizedLoot loot, IReadOnlyList<SubmarineChoice> submarineChoices)
+    /// <param name="submarineChoices">角色名下的艇 + 「未标明」，供人工纠正归属。</param>
+    /// <param name="submarineNote">艇名需要人看一眼时的提示（读歪了、分不清），其余情况为空。</param>
+    public LootRowViewModel(
+        RecognizedLoot loot,
+        IReadOnlyList<SubmarineChoice> submarineChoices,
+        string submarineNote = "")
     {
         SubmarineChoices = submarineChoices;
+        SubmarineNote = submarineNote;
         _selectedSubmarine = loot.SubmarineName is { Length: > 0 } name
             ? submarineChoices.FirstOrDefault(x => x.Name == name) ?? new SubmarineChoice(name)
             : submarineChoices[0];
@@ -60,6 +65,14 @@ public sealed partial class LootRowViewModel : ObservableObject
     public bool HasCandidateChoice => _candidates.Count > 1;
 
     public string SubmarineLabel => SubmarineName ?? Loc.Get("records.subUnmarked");
+
+    /// <summary>
+    /// 艇名需要人看一眼时的提示，比如「艇名读成「Strawberrv」，已按「Strawberry」记」。
+    /// 空串表示这一行的归属没歧义。
+    /// </summary>
+    public string SubmarineNote { get; }
+
+    public bool HasSubmarineNote => SubmarineNote.Length > 0;
 
     /// <summary>换语言后刷新这一行里由文案拼出来的部分。</summary>
     public void Relocalize()
