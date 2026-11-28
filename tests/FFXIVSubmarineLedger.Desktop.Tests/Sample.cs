@@ -13,7 +13,6 @@ internal static class Sample
         Id = Guid.NewGuid(),
         Name = "Tiina Branford",
         World = "Titan",
-        IsDefault = true,
     };
 
     public static Submarine Submarine { get; } = new()
@@ -30,6 +29,8 @@ internal static class Sample
     public static ISubmarineRepository SubmarineRepository => new FakeSubmarines();
 
     public static CharacterService Characters { get; } = new(new FakeCharacters());
+
+    public static SubmarineService Submarines { get; } = new(new FakeSubmarines());
 
     private static List<LootRecord> CreateRecords()
     {
@@ -79,6 +80,8 @@ internal static class Sample
             Task.FromResult<Submarine?>(Submarine.CharacterId == characterId && Submarine.Name == name ? Submarine : null);
 
         public Task AddAsync(Submarine submarine, CancellationToken ct = default) => Task.CompletedTask;
+
+        public Task UpdateAsync(Submarine submarine, CancellationToken ct = default) => Task.CompletedTask;
     }
 
     private sealed class FakeCharacters : ICharacterRepository

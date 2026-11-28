@@ -59,10 +59,11 @@ public sealed class LootEntryNamingTests
             Quantity: 20,
             IsHighQuality: false,
             UnitPrice: 4,
+            CharacterName: "Tiina Branford",
             SubmarineName: "Blackberry",
             RawLine: "テスト");
 
-        var row = new LootRowViewModel(unknown, [new SubmarineChoice(string.Empty)]);
+        var row = new LootRowViewModel(unknown, [], null, [new SubmarineChoice(string.Empty)]);
         row.UnitPriceOverride = 4;
 
         Assert.Equal("プラチナインゴット", row.ToEntry().ItemName);
@@ -82,9 +83,10 @@ public sealed class LootEntryNamingTests
             Quantity: 20,
             IsHighQuality: false,
             UnitPrice: 4,
+            CharacterName: "Tiina Branford",
             SubmarineName: "Blackberry",
             RawLine: "テスト");
 
-        return new LootRowViewModel(loot, [new SubmarineChoice(string.Empty)]);
+        return new LootRowViewModel(loot, [], null, [new SubmarineChoice(string.Empty)]);
     }
 }

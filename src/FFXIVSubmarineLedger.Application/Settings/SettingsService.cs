@@ -17,13 +17,6 @@ public sealed class SettingsService(ISettingsStore store)
         _cached = settings;
     }
 
-    public async Task SetDefaultCharacterAsync(Guid? characterId, CancellationToken ct = default)
-    {
-        AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
-        settings.DefaultCharacterId = characterId;
-        await SaveAsync(settings, ct).ConfigureAwait(false);
-    }
-
     /// <summary>切换界面语言并落库。</summary>
     public async Task SetUiLanguageAsync(string language, CancellationToken ct = default)
     {
@@ -47,13 +40,6 @@ public sealed class SettingsService(ISettingsStore store)
         settings.ProxyProtocol = proxyProtocol;
         settings.ProxyHost = proxyHost ?? string.Empty;
         settings.ProxyPort = proxyPort;
-        await SaveAsync(settings, ct).ConfigureAwait(false);
-    }
-
-    public async Task SetLastSelectedCharacterAsync(Guid? characterId, CancellationToken ct = default)
-    {
-        AppSettings settings = await GetAsync(ct).ConfigureAwait(false);
-        settings.LastSelectedCharacterId = characterId;
         await SaveAsync(settings, ct).ConfigureAwait(false);
     }
 

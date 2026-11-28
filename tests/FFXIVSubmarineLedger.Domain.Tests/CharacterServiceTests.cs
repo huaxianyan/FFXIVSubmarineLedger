@@ -8,27 +8,6 @@ namespace FFXIVSubmarineLedger.Domain.Tests;
 public sealed class CharacterServiceTests
 {
     [Fact]
-    public async Task FirstCharacterBecomesDefault()
-    {
-        CharacterService service = new(new FakeCharacterRepository());
-
-        Character created = await service.AddAsync("Alice", "红玉海");
-
-        Assert.True(created.IsDefault);
-    }
-
-    [Fact]
-    public async Task SecondCharacterIsNotDefault()
-    {
-        CharacterService service = new(new FakeCharacterRepository());
-        await service.AddAsync("Alice", "红玉海");
-
-        Character second = await service.AddAsync("Bob", "红玉海");
-
-        Assert.False(second.IsDefault);
-    }
-
-    [Fact]
     public async Task EmptyNameIsRejected()
     {
         CharacterService service = new(new FakeCharacterRepository());
@@ -57,21 +36,7 @@ public sealed class CharacterServiceTests
     }
 
     [Fact]
-    public async Task SetDefaultClearsOtherDefaults()
-    {
-        FakeCharacterRepository repository = new();
-        CharacterService service = new(repository);
-        Character first = await service.AddAsync("Alice", "红玉海");
-        Character second = await service.AddAsync("Bob", "红玉海");
-
-        await service.SetDefaultAsync(second.Id);
-
-        Assert.False((await repository.FindAsync(first.Id))!.IsDefault);
-        Assert.True((await repository.FindAsync(second.Id))!.IsDefault);
-    }
-
-    [Fact]
-    public async Task DeactivatingDefaultMovesDefaultToAnotherActiveCharacter()
+    public async Task DeactivatingOnlyTouchesThatCharacter()
     {
         FakeCharacterRepository repository = new();
         CharacterService service = new(repository);
@@ -80,21 +45,22 @@ public sealed class CharacterServiceTests
 
         await service.SetActiveAsync(first.Id, false);
 
-        Assert.False((await repository.FindAsync(first.Id))!.IsDefault);
-        Assert.True((await repository.FindAsync(second.Id))!.IsDefault);
+        Assert.False((await repository.FindAsync(first.Id))!.IsActive);
+        Assert.True((await repository.FindAsync(second.Id))!.IsActive);
     }
 
     [Fact]
-    public async Task DeletingDefaultMovesDefaultToRemainingCharacter()
+    public async Task DeletingRemovesOnlyThatCharacter()
     {
         FakeCharacterRepository repository = new();
         CharacterService service = new(repository);
         Character first = await service.AddAsync("Alice", "红玉海");
-        Character second = await service.AddAsync("Bob", "红玉海");
+        await service.AddAsync("Bob", "红玉海");
 
         await service.DeleteAsync(first.Id);
 
-        Assert.True((await repository.FindAsync(second.Id))!.IsDefault);
+        Assert.Null(await repository.FindAsync(first.Id));
+        Assert.Single(await repository.ListAsync());
     }
 
     [Fact]

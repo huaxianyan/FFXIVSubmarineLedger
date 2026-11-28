@@ -13,6 +13,7 @@ namespace FFXIVSubmarineLedger.Infrastructure.Parsing;
 /// <param name="Quantity">数量。</param>
 /// <param name="IsHighQuality">是否 HQ。乘以 HQ 价的依据。</param>
 /// <param name="UnitPrice">单位卖店价。没命中时为 0，等用户补。</param>
+/// <param name="CharacterName">收益归谁：日志行里的「<角色名>は」。行里没有主语时为 null。</param>
 /// <param name="SubmarineName">这批收益属于哪艘艇。日志里没等到「探索完了」行为 null。</param>
 /// <param name="RawLine">产生这条记录的原始日志行，用于去重与排查。</param>
 public sealed record RecognizedLoot(
@@ -25,6 +26,7 @@ public sealed record RecognizedLoot(
     int Quantity,
     bool IsHighQuality,
     int UnitPrice,
+    string? CharacterName,
     string? SubmarineName,
     string RawLine)
 {
@@ -102,6 +104,7 @@ public static class LootScanner
                     parsed.Quantity,
                     false,
                     0,
+                    parsed.ActorName,
                     submarineName,
                     parsed.RawLine));
                 continue;
@@ -120,6 +123,7 @@ public static class LootScanner
                 parsed.Quantity,
                 highQuality,
                 ShopPrice.For(item.ShopPriceNq, highQuality),
+                parsed.ActorName,
                 submarineName,
                 parsed.RawLine));
         }

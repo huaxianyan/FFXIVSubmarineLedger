@@ -73,7 +73,7 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             """
-            SELECT id, name, world, is_active, is_default, created_at
+            SELECT id, name, world, is_active, created_at
               FROM characters
              ORDER BY created_at, name;
             """;
@@ -87,8 +87,7 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
                 reader.GetString(1),
                 reader.GetString(2),
                 reader.GetInt64(3) != 0,
-                reader.GetInt64(4) != 0,
-                DateTimeOffset.Parse(reader.GetString(5), CultureInfo.InvariantCulture)));
+                DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture)));
         }
 
         return result;
@@ -206,14 +205,13 @@ public sealed class SqliteBackupStore(SqliteDatabase database) : IBackupStore
         command.Transaction = transaction;
         command.CommandText =
             """
-            INSERT INTO characters (id, name, world, is_active, is_default, created_at)
-            VALUES ($id, $name, $world, $active, $default, $created);
+            INSERT INTO characters (id, name, world, is_active, created_at)
+            VALUES ($id, $name, $world, $active, $created);
             """;
         command.Parameters.AddWithValue("$id", character.Id.ToString());
         command.Parameters.AddWithValue("$name", character.Name);
         command.Parameters.AddWithValue("$world", character.World);
         command.Parameters.AddWithValue("$active", character.IsActive ? 1 : 0);
-        command.Parameters.AddWithValue("$default", character.IsDefault ? 1 : 0);
         command.Parameters.AddWithValue("$created", character.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
         command.ExecuteNonQuery();
     }

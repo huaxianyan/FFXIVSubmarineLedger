@@ -87,6 +87,7 @@ public sealed class LootAccumulatorTests
         Quantity: 5,
         IsHighQuality: false,
         UnitPrice: 34500,
+        CharacterName: "Tiina Branford",
         SubmarineName: submarine,
         RawLine: rawLine);
 }

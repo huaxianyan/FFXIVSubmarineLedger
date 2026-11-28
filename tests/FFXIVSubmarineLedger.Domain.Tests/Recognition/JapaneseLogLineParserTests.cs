@@ -28,6 +28,25 @@ public sealed class JapaneseLogLineParserTests
         Assert.Equal(line, parsed.RawLine);
     }
 
+    [Theory]
+    [InlineData("[11:41] Tiina Branfordは 沈没船の指輪×4を入手した。", "TiinaBranford")]
+    [InlineData("[11:41] Tiina Branford はルビー×4を入手した。", "TiinaBranford")]
+    [InlineData("[11:41] テストさんはルビー×4を入手した。", "テスト")]
+    public void TryParse_TakesTheCharacterNameAsTheOwner(string line, string owner)
+    {
+        Assert.True(JapaneseLogLineParser.TryParse(line, out LootLine parsed));
+        Assert.Equal(owner, parsed.ActorName);
+    }
+
+    [Fact]
+    public void TryParse_RejectsALineWithoutAnActor()
+    {
+        // 「〜の景品として」这类没有主语的行不是收艇收益，也不能靠猜角色归属。
+        Assert.False(JapaneseLogLineParser.TryParse(
+            "[11:41] 沈没船の指輪×4を入手した。",
+            out _));
+    }
+
     [Fact]
     public void TryParse_SeesTheHighQualitySuffixUsedByTheChatLog()
     {

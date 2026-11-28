@@ -64,6 +64,21 @@ public sealed class SqliteSubmarineRepository(SqliteDatabase database) : ISubmar
         });
     }
 
+    public Task UpdateAsync(Submarine submarine, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(submarine);
+
+        using SqliteConnection connection = database.Open();
+        using SqliteCommand command = connection.CreateCommand();
+
+        command.CommandText = "UPDATE submarines SET name = $name WHERE id = $id;";
+        command.Parameters.AddWithValue("$id", submarine.Id.ToString());
+        command.Parameters.AddWithValue("$name", submarine.Name);
+        command.ExecuteNonQuery();
+
+        return Task.CompletedTask;
+    }
+
     public Task AddAsync(Submarine submarine, CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(submarine);

@@ -118,7 +118,7 @@ public sealed class BackupServiceTests : IDisposable
             new BackupDocument(
                 BackupDocument.CurrentVersion,
                 new DateTimeOffset(2026, 10, 27, 12, 0, 0, TimeSpan.FromHours(9)),
-                [new BackupCharacter(CharacterId, "Alice", "红玉海", true, true, DateTimeOffset.Now)],
+                [new BackupCharacter(CharacterId, "Alice", "红玉海", true, DateTimeOffset.Now)],
                 [],
                 [new BackupSubmarine(SubmarineId, CharacterId, "Strawberry", DateTimeOffset.Now)],
                 [

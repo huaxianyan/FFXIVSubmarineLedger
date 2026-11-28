@@ -34,6 +34,7 @@ public sealed class ApplicationComposition
         Settings = new SettingsService(settingsStore);
         Records = new SqliteLootRecordRepository(database);
         Submarines = new SqliteSubmarineRepository(database);
+        SubmarineNames = new SubmarineService(Submarines);
         Backup = new BackupService(new SqliteBackupStore(database));
 
         Version currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 1, 0);
@@ -60,6 +61,9 @@ public sealed class ApplicationComposition
     public string DataDirectory { get; }
 
     public CharacterService Characters { get; }
+
+    /// <summary>潜艇的业务规则（改名、按角色列出来）。</summary>
+    public SubmarineService SubmarineNames { get; }
 
     public SettingsService Settings { get; }
 

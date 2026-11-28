@@ -19,7 +19,10 @@ public sealed partial class MainWindowViewModel : ObservableObject
         _composition = composition;
         _chatDump = new ChatLogDump(composition.DataDirectory);
 
-        Characters = new CharacterManagerViewModel(composition.Characters);
+        Characters = new CharacterManagerViewModel(
+            composition.Characters,
+            composition.SubmarineNames,
+            topLevelProvider);
         Records = new RecordsPageViewModel(
             topLevelProvider,
             Characters,

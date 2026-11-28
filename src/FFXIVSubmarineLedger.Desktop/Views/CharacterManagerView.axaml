@@ -13,10 +13,13 @@
                     <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr characters.addTitle}" />
                     <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
                                Text="{loc:Tr characters.addHint}" />
-                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+                    <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="10">
                         <TextBox PlaceholderText="{loc:Tr characters.namePlaceholder}" Text="{Binding NewName}" />
                         <TextBox Grid.Column="1" PlaceholderText="{loc:Tr characters.worldPlaceholder}" Text="{Binding NewWorld}" />
-                        <Button Grid.Column="2" Classes="accent" Content="{loc:Tr characters.add}"
+                        <Button Grid.Column="2" Content="{loc:Tr characters.paste}"
+                                ToolTip.Tip="{loc:Tr characters.pasteHint}"
+                                Command="{Binding PasteCommand}" />
+                        <Button Grid.Column="3" Classes="accent" Content="{loc:Tr characters.add}"
                                 Command="{Binding AddCommand}" />
                     </Grid>
                 </StackPanel>
@@ -51,32 +54,74 @@
                     <DataTemplate x:DataType="vm:CharacterRowViewModel">
                         <Border Margin="0,0,0,8" Padding="18,14" CornerRadius="10"
                                 BorderThickness="1" BorderBrush="#40808080" Background="#0A808080">
-                            <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
-                                <StackPanel Orientation="Horizontal" Spacing="8">
-                                    <TextBlock FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
-                                               Text="{Binding Name}" />
-                                    <Border CornerRadius="4" Padding="7,2" Background="#285B8DEF"
-                                            VerticalAlignment="Center" IsVisible="{Binding IsDefault}">
-                                        <TextBlock FontSize="11" Text="{loc:Tr characters.default}" />
-                                    </Border>
-                                    <Border CornerRadius="4" Padding="7,2" Background="#1A808080"
-                                            VerticalAlignment="Center" IsVisible="{Binding IsInactive}">
-                                        <TextBlock FontSize="11" Opacity="0.8" Text="{loc:Tr characters.inactive}" />
-                                    </Border>
-                                </StackPanel>
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4"
+                                      IsVisible="{Binding !IsEditing}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock FontSize="15" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   Text="{Binding Name}" />
+                                        <Border CornerRadius="4" Padding="7,2" Background="#1A808080"
+                                                VerticalAlignment="Center" IsVisible="{Binding IsInactive}">
+                                            <TextBlock FontSize="11" Opacity="0.8" Text="{loc:Tr characters.inactive}" />
+                                        </Border>
+                                    </StackPanel>
 
-                                <TextBlock Grid.Row="1" FontSize="12" Opacity="0.65"
-                                           Text="{Binding WorldLabel}" />
+                                    <TextBlock Grid.Row="1" FontSize="12" Opacity="0.65"
+                                               Text="{Binding WorldLabel}" />
 
-                                <StackPanel Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
-                                            Spacing="8" VerticalAlignment="Center">
-                                    <Button Content="{loc:Tr characters.setDefault}" Command="{Binding SetDefaultCommand}"
-                                            IsVisible="{Binding CanSetDefault}" />
-                                    <Button Content="{Binding ToggleLabel}"
-                                            Command="{Binding ToggleActiveCommand}" />
-                                    <Button Content="{loc:Tr characters.delete}" Command="{Binding DeleteCommand}" />
+                                    <StackPanel Grid.Column="1" Grid.RowSpan="2" Orientation="Horizontal"
+                                                Spacing="8" VerticalAlignment="Center">
+                                        <Button Content="{loc:Tr characters.edit}"
+                                                Command="{Binding BeginEditCommand}" />
+                                        <Button Content="{Binding ToggleLabel}"
+                                                Command="{Binding ToggleActiveCommand}" />
+                                        <Button Content="{loc:Tr characters.delete}" Command="{Binding DeleteCommand}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="8" IsVisible="{Binding IsEditing}">
+                                    <TextBox FontSize="13" Text="{Binding EditName}"
+                                             PlaceholderText="{loc:Tr characters.namePlaceholder}" />
+                                    <TextBox Grid.Column="1" FontSize="13" Text="{Binding EditWorld}"
+                                             PlaceholderText="{loc:Tr characters.worldPlaceholder}" />
+                                    <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="6">
+                                        <Button Classes="accent" Content="{loc:Tr characters.saveEdit}"
+                                                Command="{Binding SaveEditCommand}" />
+                                        <Button Content="{loc:Tr characters.cancelEdit}"
+                                                Command="{Binding CancelEditCommand}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Button HorizontalAlignment="Left" Padding="8,3"
+                                        Command="{Binding ToggleSubmarinesCommand}">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock FontSize="11" Opacity="0.7" Text="{Binding ExpandGlyph}" />
+                                        <TextBlock FontSize="12" Opacity="0.75" Text="{Binding SubmarineCountLabel}" />
+                                    </StackPanel>
+                                </Button>
+
+                                <StackPanel Spacing="4" Margin="4,0,0,2" IsVisible="{Binding ShowSubmarineList}">
+                                    <TextBlock FontSize="11" Opacity="0.6" TextWrapping="Wrap"
+                                               Text="{loc:Tr characters.submarineHint}" />
+
+                                    <ItemsControl ItemsSource="{Binding Submarines}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:SubmarineRowViewModel">
+                                                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8" Margin="0,2">
+                                                    <TextBox FontSize="12" Text="{Binding EditName}" />
+                                                    <Button Grid.Column="1" FontSize="12"
+                                                            Content="{loc:Tr characters.saveEdit}"
+                                                            IsEnabled="{Binding CanSave}"
+                                                            Command="{Binding SaveCommand}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock FontSize="12" Opacity="0.6" IsVisible="{Binding HasNoSubmarines}"
+                                               Text="{loc:Tr characters.submarinesEmpty}" />
                                 </StackPanel>
-                            </Grid>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>

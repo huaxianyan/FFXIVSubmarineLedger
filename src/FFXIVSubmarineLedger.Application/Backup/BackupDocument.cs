@@ -6,7 +6,6 @@ public sealed record BackupCharacter(
     string Name,
     string World,
     bool IsActive,
-    bool IsDefault,
     DateTimeOffset CreatedAt);
 
 /// <summary>备份里的部队。</summary>

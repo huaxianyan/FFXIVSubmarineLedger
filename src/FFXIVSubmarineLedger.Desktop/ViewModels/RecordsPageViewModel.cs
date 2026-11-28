@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using FFXIVSubmarineLedger.Application.Abstractions;
 using FFXIVSubmarineLedger.Application.Localization;
+using FFXIVSubmarineLedger.Application.Names;
 using FFXIVSubmarineLedger.Application.Records;
 using FFXIVSubmarineLedger.Domain.Characters;
 using FFXIVSubmarineLedger.Desktop.Services;
@@ -58,10 +59,17 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         _chatDump = chatDump;
         Characters = characters;
 
+        // 行集合一有变化（识别结果进来、清场）就重算合计：不依赖调用方记着刷新。
+        LootRows.CollectionChanged += (_, _) => RefreshLootTotals();
+
         Characters.PropertyChanged += (_, args) =>
         {
-            if (args.PropertyName == nameof(CharacterManagerViewModel.Rows))
-                OnPropertyChanged(nameof(TargetCharacterLabel));
+            if (args.PropertyName != nameof(CharacterManagerViewModel.Rows))
+                return;
+
+            // 角色页加/删了角色：可选角色立刻跟上，已经解析好的行不动（它们各自选了谁是谁）。
+            _ownership = new OwnershipResolver(BuildCharacterRefs(), []);
+            RefreshOwnershipSummary();
         };
     }
 
@@ -159,24 +167,35 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     /// </summary>
     public bool ShowIntakeGuides => !HasImage && LootRows.Count == 0;
 
-    public bool CanSave => LootRows.Any(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0);
+    /// <summary>能入账：至少一行有数量有价，并且**每一行都认出了角色**（不能悄悄漏掉某一行）。</summary>
+    public bool CanSave
+    {
+        get
+        {
+            List<LootRowViewModel> included = IncludedRows();
+            return included.Count > 0 && included.All(x => x.CharacterId is not null);
+        }
+    }
+
+    /// <summary>会真正入账的行：勾着、有数量、有价。</summary>
+    private List<LootRowViewModel> IncludedRows() =>
+    [
+        .. LootRows.Where(x => x.IsIncluded && x.EffectedQuantity > 0 && x.UnitPrice > 0),
+    ];
 
     /// <summary>预览图。勾上叠加就显示画了行框的版，否则显示原图。</summary>
     public Bitmap? Preview => ShowLineOverlay && Overlay is not null ? Overlay : Source;
 
     public bool HasStatus => StatusMessage.Length > 0;
 
-    /// <summary>目标角色名下已有的艇名，用来把 OCR 读歪的艇名对回去。每次识别、落库前刷新。</summary>
-    private IReadOnlyList<string> _knownSubmarines = [];
+    /// <summary>角色与艇的解析器：启用中的角色 + 各自名下的艇。每次识别、落库前刷新。</summary>
+    private OwnershipResolver _ownership = new([], []);
 
-    /// <summary>这笔收益会记到谁名下。</summary>
-    public string TargetCharacterLabel => TargetCharacter is { } target
-        ? target.DisplayName
-        : Loc.Get("status.noCharacterHint");
-
-    /// <summary>落库与归属解析的目标角色：默认角色，没有就取第一个。</summary>
-    private CharacterRowViewModel? TargetCharacter =>
-        Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
+    /// <summary>
+    /// 这笔收益记到谁名下。角色从日志行里读（「角色名は …を入手」），不再有默认角色：
+    /// 全部认出来就是一个角色名，分给多个角色就报个数，有认不出的先报出来。
+    /// </summary>
+    public string OwnershipSummary { get; private set; } = string.Empty;
 
     [RelayCommand]
     private Task ReadClipboard() => ReadFromClipboardAsync();
@@ -386,7 +405,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
             IReadOnlyList<RecognizedLoot> loot = LootScanner.Scan(texts, _catalog.Value);
 
-            await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
+            await RefreshOwnershipAsync().ConfigureAwait(true);
             ReplaceRows(loot);
 
             StatusMessage = loot.Count == 0
@@ -505,21 +524,10 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         if (loot.Count == 0)
             return [];
 
-        await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
-
-        var ambiguous = new List<string>();
-        IReadOnlyList<ResolvedLoot> resolved = ResolveSubmarines(loot, ambiguous);
-        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(resolved, ambiguous);
+        await RefreshOwnershipAsync().ConfigureAwait(true);
 
         // 只追加，不清空：用户可能已经改过前面几行的数量或品质。
-        foreach (ResolvedLoot entry in resolved)
-        {
-            LootRowViewModel row = new(entry.Loot, choices, entry.SubmarineNote);
-            row.PropertyChanged += OnLootRowChanged;
-            LootRows.Add(row);
-        }
-
-        RefreshLootTotals();
+        AddRows(loot);
         return loot;
     }
 
@@ -572,14 +580,25 @@ public sealed partial class RecordsPageViewModel : ObservableObject
 
     private void ReplaceRows(IReadOnlyList<RecognizedLoot> loot)
     {
-        var ambiguous = new List<string>();
-        IReadOnlyList<ResolvedLoot> resolved = ResolveSubmarines(loot, ambiguous);
-        IReadOnlyList<SubmarineChoice> choices = BuildSubmarineChoices(resolved, ambiguous);
-
         LootRows.Clear();
-        foreach (ResolvedLoot entry in resolved)
+        AddRows(loot);
+    }
+
+    /// <summary>把识别结果变成确认行（追加，不清空已有行）。</summary>
+    private void AddRows(IReadOnlyList<RecognizedLoot> loot)
+    {
+        foreach (RecognizedLoot entry in loot)
         {
-            LootRowViewModel row = new(entry.Loot, choices, entry.SubmarineNote);
+            Ownership ownership = _ownership.Resolve(entry.CharacterName, entry.SubmarineName);
+
+            LootRowViewModel row = new(
+                entry with { SubmarineName = ownership.SubmarineName },
+                _ownership.Characters,
+                ownership.Character,
+                SubmarineChoicesFor(ownership.Character, ownership.SubmarineName),
+                ownership.CharacterNote,
+                ownership.SubmarineNote);
+
             row.PropertyChanged += OnLootRowChanged;
             LootRows.Add(row);
         }
@@ -588,82 +607,92 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     }
 
     /// <summary>
-    /// 把读出来的艇名对回角色名下已有的艇。
-    ///
-    /// 不对回去就会凭空造艇：实测 2026-11-22 的一次截图把 Strawberry / Blackberry / Blueberry
-    /// 读成 Strawberrv / Blackberrvy / Blug5erry，一落库就多了三艘各一条记录的艇。
-    /// 近到分不清时不替人猜，也不新建：置为未标明，把那几个候选塞进可选列表并给出提示。
-    /// </summary>
-    private IReadOnlyList<ResolvedLoot> ResolveSubmarines(IReadOnlyList<RecognizedLoot> loot, List<string> ambiguousNames)
-    {
-        List<ResolvedLoot> resolved = new(loot.Count);
-
-        foreach (RecognizedLoot entry in loot)
-        {
-            SubmarineNameGuess guess = SubmarineNameMatcher.Guess(entry.SubmarineName, _knownSubmarines);
-
-            switch (guess.Kind)
-            {
-                case SubmarineNameKind.Corrected:
-                    resolved.Add(new ResolvedLoot(
-                        entry with { SubmarineName = guess.Name },
-                        Loc.Format("records.subCorrected", entry.SubmarineName!, guess.Name!)));
-                    break;
-
-                case SubmarineNameKind.Ambiguous:
-                    ambiguousNames.AddRange(guess.NearNames);
-                    resolved.Add(new ResolvedLoot(
-                        entry with { SubmarineName = null },
-                        Loc.Format("records.subAmbiguous", entry.SubmarineName!, string.Join(" / ", guess.NearNames))));
-                    break;
-
-                default:
-                    resolved.Add(new ResolvedLoot(entry, string.Empty));
-                    break;
-            }
-        }
-
-        return resolved;
-    }
-
-    /// <summary>
-    /// 确认行里可选的艇：角色名下已有的 + 本批新出现的 + 「未标明」，「分不清」时的候选也在里面。
+    /// 一行确认行可选的艇：该角色名下已有的 + 本行出现的 + 「未标明」。
     /// 识别把两艘艇的收益串在一起、或者艇名读歪了，用户能在这里改回去。
     /// </summary>
-    private IReadOnlyList<SubmarineChoice> BuildSubmarineChoices(
-        IReadOnlyList<ResolvedLoot> loot,
-        IEnumerable<string> ambiguousNames)
+    private IReadOnlyList<SubmarineChoice> SubmarineChoicesFor(CharacterRef? character, params string?[] extra)
     {
         List<SubmarineChoice> choices = [new(string.Empty)];
 
-        choices.AddRange(_knownSubmarines
-            .Concat(ambiguousNames)
-            .Concat(loot.Select(x => x.Loot.SubmarineName).OfType<string>())
-            .Where(name => name.Length > 0)
-            .Distinct(StringComparer.Ordinal)
+        if (character is { } owner)
+            choices.AddRange(_ownership.SubmarinesOf(owner.Id).Select(x => new SubmarineChoice(x)));
+
+        choices.AddRange(extra
+            .OfType<string>()
+            .Where(name => name.Length > 0 && choices.All(x => x.Name != name))
             .Order(StringComparer.Ordinal)
             .Select(name => new SubmarineChoice(name)));
 
         return choices;
     }
 
-    /// <summary>刷新目标角色名下已有的艇名。</summary>
-    private async Task RefreshKnownSubmarinesAsync()
+    /// <summary>刷新角色与各自名下的艇。每次识别、落库前刷新，界面上的解析放旧了也不会造新对象。</summary>
+    private async Task RefreshOwnershipAsync()
     {
-        if (TargetCharacter is not { } target)
-        {
-            _knownSubmarines = [];
-            return;
-        }
+        IReadOnlyList<Submarine> submarines = await _submarines.ListAsync().ConfigureAwait(true);
 
-        IReadOnlyList<Submarine> submarines = await _submarines.ListAsync(target.Id).ConfigureAwait(true);
-        _knownSubmarines = [.. submarines.Select(x => x.Name)];
+        _ownership = new OwnershipResolver(
+            BuildCharacterRefs(),
+            submarines.Select(x => (x.CharacterId, x.Name)));
     }
 
-    /// <summary>一行确认记录，连同它的艇名提示（艇名读歪了、分不清时非空）。</summary>
-    private sealed record ResolvedLoot(RecognizedLoot Loot, string SubmarineNote);
+    private IReadOnlyList<CharacterRef> BuildCharacterRefs() =>
+    [
+        .. Characters.Rows
+            .Where(x => x.IsActive)
+            .Select(x => new CharacterRef(x.Id, x.Name, x.ModelWorld)),
+    ];
 
-    private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e) => RefreshLootTotals();
+    private static string Labels(IReadOnlyList<CharacterRef> characters) =>
+        characters.Count == 0 ? string.Empty : string.Join(" / ", characters.Select(x => x.Label));
+
+    /// <summary>刷新「收益记入」那一行的说明：认出的角色、或者还差几行没选角色。</summary>
+    private void RefreshOwnershipSummary()
+    {
+        List<LootRowViewModel> included = IncludedRows();
+        int unresolved = included.Count(x => x.CharacterId is null);
+
+        OwnershipSummary = unresolved > 0
+            ? Loc.Format("records.targetUnresolved", unresolved)
+            : included
+                .Select(x => x.SelectedCharacter)
+                .OfType<CharacterRef>()
+                .DistinctBy(x => x.Id)
+                .ToList() is { Count: > 0 } owners
+                ? owners.Count == 1
+                    ? owners[0].Label
+                    : Loc.Format("records.targetMultiple", owners.Count)
+                : Loc.Get("status.noCharacterHint");
+
+        OnPropertyChanged(nameof(OwnershipSummary));
+    }
+
+    private void OnLootRowChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(LootRowViewModel.SelectedCharacter) && sender is LootRowViewModel row)
+            ApplyCharacterChange(row);
+
+        RefreshLootTotals();
+    }
+
+    /// <summary>
+    /// 行内换了角色：艇名只在角色范围内唯一，所以要换一批艇选项，并按新角色重新对一次艇名。
+    /// 对不上就回到「未标明」，不把上一个角色的艇留着。
+    /// </summary>
+    private void ApplyCharacterChange(LootRowViewModel row)
+    {
+        string? raw = row.RawSubmarineName.Length > 0 ? row.RawSubmarineName : null;
+        Ownership ownership = _ownership.Resolve(row.RawCharacterName.Length > 0 ? row.RawCharacterName : null, raw);
+
+        // 换了角色就不再按日志原文认了，直接对着新角色核对这一行的艇名。
+        NameGuess guess = row.SelectedCharacter is { } owner
+            ? NameMatcher.Guess(raw, _ownership.SubmarinesOf(owner.Id))
+            : new NameGuess(null, NameMatchKind.Missing, []);
+
+        string? submarine = guess.Name;
+        row.ResetSubmarines(SubmarineChoicesFor(row.SelectedCharacter, submarine), submarine);
+        row.SetSubmarineNote(ownership.SubmarineNote);
+    }
 
     private void RefreshLootTotals()
     {
@@ -684,6 +713,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
         if (LootSummary.Length > 0 && unknown > 0)
             LootSummary += Loc.Format("records.summaryUnpriced", unknown);
 
+        RefreshOwnershipSummary();
+
         OnPropertyChanged(nameof(HasLootRows));
         OnPropertyChanged(nameof(ShowIntakeGuides));
         OnPropertyChanged(nameof(CanSave));
@@ -696,10 +727,7 @@ public sealed partial class RecordsPageViewModel : ObservableObject
     [RelayCommand(CanExecute = nameof(CanSave))]
     private async Task SaveAsync()
     {
-        CharacterRowViewModel? target =
-            Characters.Rows.FirstOrDefault(x => x.IsDefault) ?? Characters.Rows.FirstOrDefault();
-
-        if (target is null)
+        if (Characters.Rows.Count == 0)
         {
             StatusMessage = Loc.Get("records.noCharacter");
             return;
@@ -724,42 +752,54 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             return;
         }
 
+        // 角色是归属的唯一凭据，认不出就不许入账——静默算到某个人头上比不入账更糟。
+        int ownerless = selected.Count(x => x.CharacterId is null);
+        if (ownerless > 0)
+        {
+            StatusMessage = Loc.Format("records.targetUnresolved", ownerless);
+            return;
+        }
+
         List<LootRowViewModel> included = selected;
 
         DateOnly date = DateOnly.FromDateTime(DateTime.Now);
 
-        // 落库前再刷新一次、再对一次已有的艇：界面上的解析可能是几分钟前的状态，
-        // 并且这里是对「凭空造出一艘新艇」的最后一道关。
-        await RefreshKnownSubmarinesAsync().ConfigureAwait(true);
+        // 落库前再刷新一次、再对一次已有的角色与艇：界面上的解析可能是几分钟前的状态，
+        // 并且这里是对「凭空造出一个新角色/新艇」的最后一道关。
+        await RefreshOwnershipAsync().ConfigureAwait(true);
 
         try
         {
             int records = 0;
             long total = 0;
 
-            // 一艘艇一笔记录：艇名在日志里是分组凭据，混在一笔里就没法按艇统计了。
-            foreach (IGrouping<string?, LootRowViewModel> group in included.GroupBy(x => x.SubmarineName))
+            // 一笔记录 = 一个角色 + 一艘艇：这两层都是统计的分组凭据，混在一起就没法各算各的了。
+            var groups = included.GroupBy(x => (Character: x.CharacterId!.Value, x.SubmarineName));
+
+            foreach (var group in groups)
             {
                 Guid? submarineId = null;
 
-                if (group.Key is { Length: > 0 } name)
+                if (group.Key.SubmarineName is { Length: > 0 } name)
                 {
-                    SubmarineNameGuess guess = SubmarineNameMatcher.Guess(name, _knownSubmarines);
+                    NameGuess guess = NameMatcher.Guess(name, _ownership.SubmarinesOf(group.Key.Character));
                     string effective = guess.Name ?? name;
 
-                    Submarine? submarine = await _submarines.FindByNameAsync(target.Id, effective).ConfigureAwait(true);
+                    Submarine? submarine = await _submarines
+                        .FindByNameAsync(group.Key.Character, effective)
+                        .ConfigureAwait(true);
+
                     if (submarine is null)
                     {
-                        submarine = new Submarine { CharacterId = target.Id, Name = effective };
+                        submarine = new Submarine { CharacterId = group.Key.Character, Name = effective };
                         await _submarines.AddAsync(submarine).ConfigureAwait(true);
-                        _knownSubmarines = [.. _knownSubmarines, effective];
                     }
 
                     submarineId = submarine.Id;
                 }
 
                 Domain.Records.LootRecord record = LootRecordFactory.Build(
-                    target.Id,
+                    group.Key.Character,
                     date,
                     [.. group.Select(x => x.ToEntry())]);
 
@@ -770,9 +810,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                 total += record.TotalValue;
             }
 
+            string owners = Labels([.. included
+                .Select(x => x.SelectedCharacter)
+                .OfType<CharacterRef>()
+                .DistinctBy(x => x.Id)]);
+
             string summary = Loc.Format(
                 "records.saved",
-                target.DisplayName,
+                owners,
                 $"{date:yyyy-MM-dd}",
                 records,
                 MoneyWithCompact(total));

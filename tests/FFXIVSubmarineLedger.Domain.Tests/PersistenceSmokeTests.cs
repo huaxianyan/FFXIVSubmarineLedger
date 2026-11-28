@@ -43,7 +43,7 @@ public sealed class PersistenceSmokeTests : IDisposable
         Assert.Equal(created.Id, all[0].Id);
         Assert.Equal("Alice", all[0].Name);
         Assert.Equal("红玉海", all[0].World);
-        Assert.True(all[0].IsDefault);
+        Assert.True(all[0].IsActive);
     }
 
     /// <summary>
@@ -80,19 +80,18 @@ public sealed class PersistenceSmokeTests : IDisposable
     public async Task SettingsRoundTripThroughSqlite()
     {
         SettingsService service = new(new SqliteSettingsStore(_database));
-        Guid characterId = Guid.NewGuid();
 
-        await service.SetDefaultCharacterAsync(characterId);
+        await service.SetUiLanguageAsync("ja");
 
         SettingsService reloaded = new(new SqliteSettingsStore(_database));
-        Assert.Equal(characterId, (await reloaded.GetAsync()).DefaultCharacterId);
+        Assert.Equal("ja", (await reloaded.GetAsync()).UiLanguage);
     }
 
     [Fact]
     public async Task LootRecordStoresItemsAndComputesTotal()
     {
         SqliteCharacterRepository characters = new(_database);
-        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        Character character = new() { Name = "Alice", World = "红玉海" };
         await characters.AddAsync(character);
 
         SqliteLootRecordRepository records = new(_database);
@@ -118,7 +117,7 @@ public sealed class PersistenceSmokeTests : IDisposable
     public async Task SavedRecordKeepsQualityAndMergedQuantities()
     {
         SqliteCharacterRepository characters = new(_database);
-        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        Character character = new() { Name = "Alice", World = "红玉海" };
         await characters.AddAsync(character);
 
         SqliteLootRecordRepository records = new(_database);
@@ -144,7 +143,7 @@ public sealed class PersistenceSmokeTests : IDisposable
     public async Task BackupImportReplacesEverythingInOneTransaction()
     {
         SqliteCharacterRepository characters = new(_database);
-        Character kept = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        Character kept = new() { Name = "Alice", World = "红玉海" };
         await characters.AddAsync(kept);
 
         SqliteLootRecordRepository records = new(_database);
@@ -178,7 +177,7 @@ public sealed class PersistenceSmokeTests : IDisposable
     public async Task SubmarineAndItsRecordRoundTrip()
     {
         SqliteCharacterRepository characters = new(_database);
-        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        Character character = new() { Name = "Alice", World = "红玉海" };
         await characters.AddAsync(character);
 
         SqliteSubmarineRepository submarines = new(_database);
@@ -240,7 +239,7 @@ public sealed class PersistenceSmokeTests : IDisposable
     public async Task DeletingRecordCascadesToItems()
     {
         SqliteCharacterRepository characters = new(_database);
-        Character character = new() { Name = "Alice", World = "红玉海", IsDefault = true };
+        Character character = new() { Name = "Alice", World = "红玉海" };
         await characters.AddAsync(character);
 
         SqliteLootRecordRepository records = new(_database);

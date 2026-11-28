@@ -9,7 +9,12 @@ namespace FFXIVSubmarineLedger.Infrastructure.Parsing;
 /// <param name="Quantity">入手数量。</param>
 /// <param name="LooksHighQuality">数量前面多出来的标记，可能是 HQ 的 <c>◉</c>。词表说该物不能 HQ 时以词表为准。</param>
 /// <param name="RawLine">原始行，留着给确认界面显示与排查用。</param>
-public sealed record LootLine(string ItemText, int Quantity, bool LooksHighQuality, string RawLine);
+public sealed record LootLine(
+    string ActorName,
+    string ItemText,
+    int Quantity,
+    bool LooksHighQuality,
+    string RawLine);
 
 /// <summary>
 /// 日文客户端日志行解析。
@@ -116,7 +121,7 @@ public static class JapaneseLogLineParser
 
         // 必须能找到「<角色名>は」这个分隔：真实聊天记录里还有「〜の景品として、…を入手しました。」
         // 这类没有主语的行，它们不是收艇收益，不能当成入手记录。
-        if (!TryDropActorPrefix(rest, out rest))
+        if (!TryTakeActorPrefix(rest, out string actorName, out rest))
             return false;
 
         rest = TrimLeadingLinkNoise(rest);
@@ -134,7 +139,7 @@ public static class JapaneseLogLineParser
         if (rest.Length == 0)
             return false;
 
-        parsed = new LootLine(rest, quantity, looksHighQuality, line);
+        parsed = new LootLine(actorName, rest, quantity, looksHighQuality, line);
         return true;
     }
 
@@ -179,9 +184,15 @@ public static class JapaneseLogLineParser
         return start == text.Length ? text : text[start..];
     }
 
-    /// <summary>去掉时间戳与「角色名は」，只留物名起的部分。找不到「は」时返回 false。</summary>
-    private static bool TryDropActorPrefix(string text, out string rest)
+    /// <summary>
+    /// 拆出时间戳后面的「角色名は」：<paramref name="actorName"/> 是收益归谁，<paramref name="rest"/> 从物名开始。
+    /// 找不到「は」时返回 false。
+    /// </summary>
+    private static bool TryTakeActorPrefix(string text, out string actorName, out string rest)
     {
+        actorName = string.Empty;
+        rest = string.Empty;
+
         int start = 0;
 
         if (text.StartsWith('['))
@@ -193,18 +204,16 @@ public static class JapaneseLogLineParser
 
         int limit = Math.Min(text.Length, start + ActorNameLimit);
         if (limit <= start)
-        {
-            rest = string.Empty;
             return false;
-        }
 
         int actorEnd = text.IndexOf('は', start, limit - start);
         if (actorEnd < 0)
-        {
-            rest = string.Empty;
             return false;
-        }
 
+        // 整行在进来时就削掉了空白（OCR 常在字间插空），所以这里只去掉敬称。
+        actorName = text[start..actorEnd].Trim();
+        if (actorName.EndsWith("さん", StringComparison.Ordinal))
+            actorName = actorName[..^2];
         rest = text[(actorEnd + 1)..];
         return true;
     }

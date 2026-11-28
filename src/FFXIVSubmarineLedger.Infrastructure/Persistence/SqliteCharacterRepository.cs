@@ -7,7 +7,7 @@ namespace FFXIVSubmarineLedger.Infrastructure.Persistence;
 
 public sealed class SqliteCharacterRepository(SqliteDatabase database) : ICharacterRepository
 {
-    private const string SelectColumns = "id, name, world, is_active, is_default, created_at";
+    private const string SelectColumns = "id, name, world, is_active, created_at";
 
     public Task<IReadOnlyList<Character>> ListAsync(CancellationToken ct = default)
     {
@@ -38,8 +38,8 @@ public sealed class SqliteCharacterRepository(SqliteDatabase database) : ICharac
         using SqliteCommand command = connection.CreateCommand();
         command.CommandText =
             """
-            INSERT INTO characters (id, name, world, is_active, is_default, created_at)
-            VALUES ($id, $name, $world, $active, $default, $created);
+            INSERT INTO characters (id, name, world, is_active, created_at)
+            VALUES ($id, $name, $world, $active, $created);
             """;
         Bind(command, character);
         command.ExecuteNonQuery();
@@ -53,7 +53,7 @@ public sealed class SqliteCharacterRepository(SqliteDatabase database) : ICharac
         command.CommandText =
             """
             UPDATE characters
-               SET name = $name, world = $world, is_active = $active, is_default = $default
+               SET name = $name, world = $world, is_active = $active
              WHERE id = $id;
             """;
         Bind(command, character);
@@ -77,7 +77,6 @@ public sealed class SqliteCharacterRepository(SqliteDatabase database) : ICharac
         command.Parameters.AddWithValue("$name", character.Name);
         command.Parameters.AddWithValue("$world", character.World);
         command.Parameters.AddWithValue("$active", character.IsActive ? 1 : 0);
-        command.Parameters.AddWithValue("$default", character.IsDefault ? 1 : 0);
         command.Parameters.AddWithValue("$created", character.CreatedAt.ToString("o", CultureInfo.InvariantCulture));
     }
 
@@ -87,7 +86,6 @@ public sealed class SqliteCharacterRepository(SqliteDatabase database) : ICharac
         Name = reader.GetString(1),
         World = reader.GetString(2),
         IsActive = reader.GetInt64(3) != 0,
-        IsDefault = reader.GetInt64(4) != 0,
-        CreatedAt = DateTimeOffset.Parse(reader.GetString(5), CultureInfo.InvariantCulture),
+        CreatedAt = DateTimeOffset.Parse(reader.GetString(4), CultureInfo.InvariantCulture),
     };
 }

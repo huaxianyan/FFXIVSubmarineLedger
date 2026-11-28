@@ -3,6 +3,7 @@
              xmlns:loc="clr-namespace:FFXIVSubmarineLedger.Desktop.Localization"
              xmlns:vm="clr-namespace:FFXIVSubmarineLedger.Desktop.ViewModels"
              xmlns:domain="clr-namespace:FFXIVSubmarineLedger.Domain.Catalog;assembly=FFXIVSubmarineLedger.Domain"
+             xmlns:records="clr-namespace:FFXIVSubmarineLedger.Application.Records;assembly=FFXIVSubmarineLedger.Application"
              x:Class="FFXIVSubmarineLedger.Desktop.Views.RecordsPageView"
              x:DataType="vm:RecordsPageViewModel"
              x:CompileBindings="True"
@@ -66,7 +67,7 @@
                     <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
                         <TextBlock FontSize="12" Opacity="0.6" VerticalAlignment="Center" Text="{loc:Tr records.target}" />
                         <TextBlock Grid.Column="1" FontSize="13" TextWrapping="Wrap"
-                                   Text="{Binding TargetCharacterLabel}" />
+                                   Text="{Binding OwnershipSummary}" />
                     </Grid>
                     <TextBlock FontSize="12" Opacity="0.72" TextWrapping="Wrap"
                                IsVisible="{Binding HasStatus}" Text="{Binding StatusMessage}" />
@@ -110,8 +111,21 @@
 
                                         <StackPanel Orientation="Horizontal" Spacing="6">
                                             <TextBlock FontSize="11" Opacity="0.6" VerticalAlignment="Center"
-                                                       Text="{loc:Tr records.submarineCaption}" />
+                                                       Text="{loc:Tr records.characterCaption}" />
                                             <ComboBox FontSize="11" MinWidth="150"
+                                                      ItemsSource="{Binding CharacterChoices}"
+                                                      SelectedItem="{Binding SelectedCharacter}">
+                                                <ComboBox.ItemTemplate>
+                                                    <DataTemplate x:DataType="records:CharacterRef">
+                                                        <TextBlock FontSize="11" Text="{Binding Label}" />
+                                                    </DataTemplate>
+                                                </ComboBox.ItemTemplate>
+                                            </ComboBox>
+
+                                            <TextBlock FontSize="11" Opacity="0.6" VerticalAlignment="Center"
+                                                       Margin="6,0,0,0"
+                                                       Text="{loc:Tr records.submarineCaption}" />
+                                            <ComboBox FontSize="11" MinWidth="130"
                                                       ItemsSource="{Binding SubmarineChoices}"
                                                       SelectedItem="{Binding SelectedSubmarine}">
                                                 <ComboBox.ItemTemplate>
@@ -121,6 +135,11 @@
                                                 </ComboBox.ItemTemplate>
                                             </ComboBox>
                                         </StackPanel>
+
+                                        <TextBlock FontSize="11" Opacity="0.75" TextWrapping="Wrap"
+                                                   Foreground="#C08030"
+                                                   IsVisible="{Binding HasCharacterNote}"
+                                                   Text="{Binding CharacterNote}" />
 
                                         <TextBlock FontSize="11" Opacity="0.75" TextWrapping="Wrap"
                                                    Foreground="#C08030"

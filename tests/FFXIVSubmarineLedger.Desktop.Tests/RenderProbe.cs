@@ -51,9 +51,19 @@ public sealed class RenderProbe
         Render(new Views.SettingsPageView { DataContext = settings }, 1100, 950,
             Path.Combine(directory, $"{stem}-settings.png"));
 
-        // 收艇记账页的确认行：每一行带的艇归属下拉与艇名提示，看是不是塞得下、有没有被挤掉。
+        // 角色页：编辑按钮、折叠的艇列表、展开后的每艘艇一行。
+        CharacterManagerViewModel roster = new(Sample.Characters, Sample.Submarines, () => null);
+        await roster.LoadAsync();
+
+        if (roster.Rows.FirstOrDefault() is { } rosterRow)
+            await roster.ToggleSubmarinesAsync(rosterRow);
+
+        Render(new Views.CharacterManagerView { DataContext = roster }, 1100, 900,
+            Path.Combine(directory, $"{stem}-characters.png"));
+
+        // 收艇记账页的确认行：每一行带的艇归属确认与艇名提示，看是不是塞得下、有没有被挤掉。
         ItemCatalog catalog = ItemCatalog.Load();
-        CharacterManagerViewModel characters = new(Sample.Characters);
+        CharacterManagerViewModel characters = new(Sample.Characters, Sample.Submarines, () => null);
         await characters.LoadAsync();
 
         RecordsPageViewModel records = new(
@@ -96,10 +106,13 @@ public sealed class RenderProbe
             quantity,
             IsHighQuality: false,
             entry.ShopPriceNq,
+            "Tiina Branford",
             submarine,
             $"Tiina Branfordは {itemName}×{quantity}を入手した。");
 
-        return new LootRowViewModel(loot, choices, note);
+        var character = new CharacterRef(Guid.Parse("11111111-1111-1111-1111-111111111111"), "Tiina Branford", "Titan");
+
+        return new LootRowViewModel(loot, [character], character, choices, string.Empty, note);
     }
 
     private static void Render(Control view, int width, int height, string path)

@@ -16,15 +16,26 @@ public sealed partial class LootRowViewModel : ObservableObject
     private readonly IReadOnlyList<LootCatalogEntry> _candidates;
 
     /// <param name="loot">识别结果。</param>
-    /// <param name="submarineChoices">角色名下的艇 + 「未标明」，供人工纠正归属。</param>
+    /// <param name="characterChoices">可归属的角色。</param>
+    /// <param name="selectedCharacter">日志里读到的角色，认不出时为 <c>null</c>。</param>
+    /// <param name="submarineChoices">该角色名下的艇 + 「未标明」，供人工纠正归属。</param>
+    /// <param name="characterNote">角色名需要人看一眼时的提示（读歪了、认不出），其余情况为空。</param>
     /// <param name="submarineNote">艇名需要人看一眼时的提示（读歪了、分不清），其余情况为空。</param>
     public LootRowViewModel(
         RecognizedLoot loot,
+        IReadOnlyList<CharacterRef> characterChoices,
+        CharacterRef? selectedCharacter,
         IReadOnlyList<SubmarineChoice> submarineChoices,
+        string characterNote = "",
         string submarineNote = "")
     {
-        SubmarineChoices = submarineChoices;
+        CharacterChoices = characterChoices;
+        CharacterNote = characterNote;
         SubmarineNote = submarineNote;
+        RawCharacterName = loot.CharacterName ?? string.Empty;
+        RawSubmarineName = loot.SubmarineName ?? string.Empty;
+        _selectedCharacter = selectedCharacter;
+        _submarineChoices = submarineChoices;
         _selectedSubmarine = loot.SubmarineName is { Length: > 0 } name
             ? submarineChoices.FirstOrDefault(x => x.Name == name) ?? new SubmarineChoice(name)
             : submarineChoices[0];
@@ -42,8 +53,51 @@ public sealed partial class LootRowViewModel : ObservableObject
 
     public int LineNumber { get; }
 
-    /// <summary>这一行属于哪艘艇的可选项。日志里的艇名会作为默认值。</summary>
-    public IReadOnlyList<SubmarineChoice> SubmarineChoices { get; }
+    /// <summary>这一行可以归到哪个角色。日志里读到的角色名作为默认值。</summary>
+    public IReadOnlyList<CharacterRef> CharacterChoices { get; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CharacterLabel))]
+    [NotifyPropertyChangedFor(nameof(CharacterId))]
+    private CharacterRef? _selectedCharacter;
+
+    public Guid? CharacterId => SelectedCharacter?.Id;
+
+    public string CharacterLabel => SelectedCharacter?.Label ?? Loc.Get("records.characterUnmarked");
+
+    /// <summary>日志里读到的角色名原文，换角色时用来重新对艇名。</summary>
+    public string RawCharacterName { get; }
+
+    /// <summary>日志里读到的艇名原文，换角色时用来重新对艇名。</summary>
+    public string RawSubmarineName { get; }
+
+    /// <summary>角色名需要人看一眼时的提示，比如「角色名读成「Tilna Branford」，已按「Tiina Branford」记」。</summary>
+    public string CharacterNote { get; private set; }
+
+    public bool HasCharacterNote => CharacterNote.Length > 0;
+
+    public void SetCharacterNote(string note)
+    {
+        CharacterNote = note;
+        OnPropertyChanged(nameof(CharacterNote));
+        OnPropertyChanged(nameof(HasCharacterNote));
+    }
+
+    /// <summary>这一行属于哪艘艇的可选项。换角色时会整批换掉。</summary>
+    [ObservableProperty]
+    private IReadOnlyList<SubmarineChoice> _submarineChoices;
+
+    /// <summary>
+    /// 换了角色就换一套艇选项：艇名只在角色范围内唯一。
+    /// 原来的选择还在就保留，不在就回到「未标明」。
+    /// </summary>
+    /// <param name="choices">新角色名下的艇 + 「未标明」。</param>
+    /// <param name="preferred">想选中的艇名（重新对过之后的结果），空或不在列表里就回到「未标明」。</param>
+    public void ResetSubmarines(IReadOnlyList<SubmarineChoice> choices, string? preferred)
+    {
+        SubmarineChoices = choices;
+        SelectedSubmarine = choices.FirstOrDefault(x => x.Name == preferred) ?? choices[0];
+    }
 
     /// <summary>
     /// 归属的艇。识别可能把相邻两艘艇的收益串在一起（收益行文本完全相同时尤其容易），
@@ -70,9 +124,16 @@ public sealed partial class LootRowViewModel : ObservableObject
     /// 艇名需要人看一眼时的提示，比如「艇名读成「Strawberrv」，已按「Strawberry」记」。
     /// 空串表示这一行的归属没歧义。
     /// </summary>
-    public string SubmarineNote { get; }
+    public string SubmarineNote { get; private set; }
 
     public bool HasSubmarineNote => SubmarineNote.Length > 0;
+
+    public void SetSubmarineNote(string note)
+    {
+        SubmarineNote = note;
+        OnPropertyChanged(nameof(SubmarineNote));
+        OnPropertyChanged(nameof(HasSubmarineNote));
+    }
 
     /// <summary>换语言后刷新这一行里由文案拼出来的部分。</summary>
     public void Relocalize()
@@ -81,6 +142,7 @@ public sealed partial class LootRowViewModel : ObservableObject
             choice.Relocalize();
 
         OnPropertyChanged(nameof(SubmarineLabel));
+        OnPropertyChanged(nameof(CharacterLabel));
         OnPropertyChanged(nameof(ItemName));
         OnPropertyChanged(nameof(PriceLabel));
     }
