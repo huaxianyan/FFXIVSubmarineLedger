@@ -26,6 +26,26 @@ public sealed partial class CharacterManagerViewModel(
     [ObservableProperty]
     private string _newWorld = string.Empty;
 
+    /// <summary>
+    /// 新建角色时可以顺手把 4 艘艇的名字填好。
+    /// 空着的位置跳过——不用等到第一次收艇才把名字补上。
+    /// </summary>
+    public ObservableCollection<SubmarineSlotViewModel> NewSubmarines { get; } = CreateSlots();
+
+    private static ObservableCollection<SubmarineSlotViewModel> CreateSlots() =>
+    [
+        .. Enumerable.Range(0, CharacterRowViewModel.SubmarineSlots)
+            .Select(index => new SubmarineSlotViewModel(null, string.Empty, index + 1)),
+    ];
+
+    private void ResetNewSubmarines()
+    {
+        NewSubmarines.Clear();
+
+        foreach (SubmarineSlotViewModel slot in CreateSlots())
+            NewSubmarines.Add(slot);
+    }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasStatus))]
     private string _statusMessage = string.Empty;
@@ -71,9 +91,12 @@ public sealed partial class CharacterManagerViewModel(
     {
         try
         {
-            await characters.AddAsync(NewName, NewWorld).ConfigureAwait(true);
+            await roster.AddAsync(NewName, NewWorld, [.. NewSubmarines.Select(x => x.EditName)])
+                .ConfigureAwait(true);
+
             NewName = string.Empty;
             NewWorld = string.Empty;
+            ResetNewSubmarines();
             StatusMessage = Loc.Get("characters.added");
             await LoadAsync().ConfigureAwait(true);
         }
@@ -146,7 +169,7 @@ public sealed partial class CharacterManagerViewModel(
                     row.Id,
                     row.EditName,
                     row.EditWorld,
-                    [.. row.Submarines.Select(x => new RosterSubmarine(x.Id, x.EditName))])
+                    [.. row.Slots.Select(x => new RosterSubmarine(x.Id, x.EditName))])
                 .ConfigureAwait(true);
 
             StatusMessage = Loc.Format("characters.rosterSaved", row.EditName.Trim());

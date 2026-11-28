@@ -21,6 +21,21 @@
                         <Button Grid.Column="2" Classes="accent" Content="{loc:Tr characters.add}"
                                 Command="{Binding AddCommand}" />
                     </Grid>
+
+                    <ItemsControl ItemsSource="{Binding NewSubmarines}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel Orientation="Horizontal" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:SubmarineSlotViewModel">
+                                <TextBox Width="150" Margin="0,0,10,0" FontSize="12"
+                                         Text="{Binding EditName}"
+                                         PlaceholderText="{Binding Placeholder}" />
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 
@@ -107,16 +122,17 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <ItemsControl ItemsSource="{Binding Submarines}" IsVisible="{Binding IsEditing}">
+                                <ItemsControl ItemsSource="{Binding Slots}" IsVisible="{Binding IsEditing}">
                                     <ItemsControl.ItemsPanel>
                                         <ItemsPanelTemplate>
                                             <WrapPanel Orientation="Horizontal" />
                                         </ItemsPanelTemplate>
                                     </ItemsControl.ItemsPanel>
                                     <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:SubmarineRowViewModel">
+                                        <DataTemplate x:DataType="vm:SubmarineSlotViewModel">
                                             <TextBox Width="150" Margin="0,0,8,6" FontSize="12"
-                                                     Text="{Binding EditName}" />
+                                                     Text="{Binding EditName}"
+                                                     PlaceholderText="{Binding Placeholder}" />
                                         </DataTemplate>
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>

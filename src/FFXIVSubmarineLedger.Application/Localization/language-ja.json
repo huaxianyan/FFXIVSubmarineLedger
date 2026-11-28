@@ -28,6 +28,7 @@
   "characters.empty": "キャラクターがいません",
   "characters.emptyHint": "上でキャラクターを追加すると、収益の記録先ができます。",
   "characters.default": "既定",
+  "characters.submarinePlaceholder": "潜水艦名 {0}（空欄可）",
   "characters.rosterSaved": "「{0}」を保存しました。",
   "characters.edit": "編集",
   "characters.saveEdit": "保存",

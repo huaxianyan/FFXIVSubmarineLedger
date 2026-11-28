@@ -12,6 +12,7 @@ v0.1.3 已发布（2026-11-28），识别、计价、备份、更新检查与多
 - **多角色各记各的**（用户提问的确认）：`JapaneseLogLineParser` 现在把「<角色名>は」里的角色名带出来（`LootLine.ActorName` → `RecognizedLoot.CharacterName`），落库按「角色 + 艇」分组，一组一笔记录。`LootRecordFactory` 不变。
 - **归属解析抽成 `OwnershipResolver`**（Application）：角色名与艇名都过 `NameMatcher` 的两档阈值（原来的 `SubmarineNameMatcher` 泛化成 `Application/Names/NameMatcher`）。角色名读歪一个字会改写并标出来；没登记过、同名不同服、分不清的一律置空，行内下拉让人选；**有任一行没选角色就不许入账**。
 - **角色页**：`Ctrl + V` 粘贴（`角色名@服务器` 自动拆两个字段；添加区那两个框里也接管，改角色名/艇名的输入框里留给 TextBox 自己粘）。**没加粘贴按钮**（用户要求只留快捷键）。名下艇名**横排**摆在卡片里（原先折叠成「潜水艦 N 艘」——中文界面用了日文词，用户指出后取消），点「编辑」时角色名、服务器、每艘艇名一起变成输入框，由 `RosterEditor.SaveAsync` **一次性校验、一次性写入**：任一名字不合法就整张卡退回去，一个字节都不写。艇改名 ID 不变，历史记录不分裂。
+- **新角色也能先填艇名**（用户反馈「新建角色不能填潜艇、新角色编辑也没有」）：添加区与编辑态都固定 4 个位置，占位「艇名 N（可留空）」；空位跳过，填了就在保存时新建，已有艇被清空名字则报错。`RosterSubmarine.Id` 为空即「新填」，`RosterEditor` 先校验全部再一次写入。
 - 新增测试：`OwnershipResolverTests`（8）、`SubmarineServiceTests`（4）、`CharacterPasteTests`（6）、解析器的角色名用例（4）、`NameMatcherTests` 改名沿用。Domain 184 + Desktop 31 全过；`RenderProbe` 加了角色页，重新渲染核对了记账页的「角色 + 艇」双下拉与摘要。
 
 ## STATUS-001：正式发布 v0.1.0

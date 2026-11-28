@@ -78,7 +78,7 @@ public sealed class RosterEditorTests
     }
 
     [Fact]
-    public async Task RefusesAnEmptySubmarineName()
+    public async Task RefusesToBlankAnExistingSubmarineName()
     {
         FakeCharacters characters = new();
         FakeSubmarines submarines = new();
@@ -91,6 +91,66 @@ public sealed class RosterEditorTests
             "Tiina Branford",
             "Titan",
             [new RosterSubmarine(submarine.Id, "  ")]));
+    }
+
+    [Fact]
+    public async Task CreatesTheSubmarinesTypedIntoTheEmptySlots()
+    {
+        FakeCharacters characters = new();
+        FakeSubmarines submarines = new();
+        Character character = characters.Add("Tiina Branford", "Titan");
+        Submarine blackberry = submarines.Add(character.Id, "Blackberry");
+        RosterEditor editor = new(characters, submarines);
+
+        await editor.SaveAsync(
+            character.Id,
+            "Tiina Branford",
+            "Titan",
+            [
+                new RosterSubmarine(blackberry.Id, "Blackberry"),
+                new RosterSubmarine(null, "Blueberry"),
+                new RosterSubmarine(null, "  "),
+                new RosterSubmarine(null, "Strawberry"),
+            ]);
+
+        Assert.Equal(
+            ["Blackberry", "Blueberry", "Strawberry"],
+            submarines.Items.Select(x => x.Name).Order(StringComparer.Ordinal));
+        Assert.All(submarines.Items, x => Assert.Equal(character.Id, x.CharacterId));
+    }
+
+    [Fact]
+    public async Task CreatesTheCharacterWithItsSubmarineNames()
+    {
+        FakeCharacters characters = new();
+        FakeSubmarines submarines = new();
+        RosterEditor editor = new(characters, submarines);
+
+        Character created = await editor.AddAsync(
+            "Tiina Branford",
+            "Titan",
+            ["Blackberry", "", "Blueberry", "  "]);
+
+        Assert.Single(characters.Items);
+        Assert.Equal(
+            ["Blackberry", "Blueberry"],
+            submarines.Items.Where(x => x.CharacterId == created.Id).Select(x => x.Name).Order(StringComparer.Ordinal));
+    }
+
+    [Fact]
+    public async Task RefusesToCreateTwoSubmarinesWithTheSameName()
+    {
+        FakeCharacters characters = new();
+        FakeSubmarines submarines = new();
+        RosterEditor editor = new(characters, submarines);
+
+        await Assert.ThrowsAsync<ValidationException>(() => editor.AddAsync(
+            "Tiina Branford",
+            "Titan",
+            ["Blackberry", "Blackberry"]));
+
+        Assert.Empty(characters.Items);
+        Assert.Empty(submarines.Items);
     }
 
     [Fact]
