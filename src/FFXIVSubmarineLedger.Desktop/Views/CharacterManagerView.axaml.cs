@@ -11,7 +11,7 @@ public partial class CharacterManagerView : UserControl
     {
         InitializeComponent();
 
-        // 整页接管 Ctrl+V：焦点不在输入框里时也能把剪贴板里那串「名字@服务器」填进来。
+        // 本页没有「粘贴」按钮：Ctrl+V 就是把「角色名@服务器」填进来的入口。
         AddHandler(KeyDownEvent, OnKeyDown, RoutingStrategies.Tunnel);
     }
 
@@ -20,11 +20,11 @@ public partial class CharacterManagerView : UserControl
         if (!IsVisible || e.Handled)
             return;
 
-        // 焦点在文本框里时让 TextBox 自己粘，别抢它的。
-        if (e.Source is TextBox)
+        if (e.Key != Key.V || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
             return;
 
-        if (e.Key != Key.V || !e.KeyModifiers.HasFlag(KeyModifiers.Control))
+        // 添加区那两个框要拆「名字@服务器」，所以也接管；改角色名/艇名的输入框留给 TextBox 自己粘。
+        if (e.Source is TextBox box && !ReferenceEquals(box, NewNameBox) && !ReferenceEquals(box, NewWorldBox))
             return;
 
         e.Handled = true;

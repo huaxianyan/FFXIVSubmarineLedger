@@ -13,13 +13,12 @@
                     <TextBlock FontSize="18" FontWeight="SemiBold" Text="{loc:Tr characters.addTitle}" />
                     <TextBlock FontSize="12" Opacity="0.65" TextWrapping="Wrap"
                                Text="{loc:Tr characters.addHint}" />
-                    <Grid ColumnDefinitions="*,*,Auto,Auto" ColumnSpacing="10">
-                        <TextBox PlaceholderText="{loc:Tr characters.namePlaceholder}" Text="{Binding NewName}" />
-                        <TextBox Grid.Column="1" PlaceholderText="{loc:Tr characters.worldPlaceholder}" Text="{Binding NewWorld}" />
-                        <Button Grid.Column="2" Content="{loc:Tr characters.paste}"
-                                ToolTip.Tip="{loc:Tr characters.pasteHint}"
-                                Command="{Binding PasteCommand}" />
-                        <Button Grid.Column="3" Classes="accent" Content="{loc:Tr characters.add}"
+                    <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="10">
+                        <TextBox x:Name="NewNameBox"
+                                 PlaceholderText="{loc:Tr characters.namePlaceholder}" Text="{Binding NewName}" />
+                        <TextBox x:Name="NewWorldBox" Grid.Column="1"
+                                 PlaceholderText="{loc:Tr characters.worldPlaceholder}" Text="{Binding NewWorld}" />
+                        <Button Grid.Column="2" Classes="accent" Content="{loc:Tr characters.add}"
                                 Command="{Binding AddCommand}" />
                     </Grid>
                 </StackPanel>
