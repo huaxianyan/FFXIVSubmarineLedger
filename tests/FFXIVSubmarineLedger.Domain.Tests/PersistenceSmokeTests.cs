@@ -88,6 +88,25 @@ public sealed class PersistenceSmokeTests : IDisposable
     }
 
     [Fact]
+    public async Task WritingSeveralRecordsAtOnceIsAllOrNothing()
+    {
+        SqliteCharacterRepository characters = new(_database);
+        Character character = new() { Name = "Alice", World = "红玉海" };
+        await characters.AddAsync(character);
+
+        SqliteLootRecordRepository records = new(_database);
+        Guid sharedId = Guid.NewGuid();
+
+        // 两条同 ID：第二条必然违反主键约束。第一条如果先提交了就会留在库里。
+        LootRecord first = new() { Id = sharedId, CharacterId = character.Id, Date = new DateOnly(2026, 11, 28) };
+        LootRecord second = new() { Id = sharedId, CharacterId = character.Id, Date = new DateOnly(2026, 11, 27) };
+
+        await Assert.ThrowsAnyAsync<SqliteException>(() => records.AddRangeAsync([first, second]));
+
+        Assert.Empty(await records.ListAsync());
+    }
+
+    [Fact]
     public async Task LootRecordStoresItemsAndComputesTotal()
     {
         SqliteCharacterRepository characters = new(_database);

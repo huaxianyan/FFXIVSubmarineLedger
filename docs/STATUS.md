@@ -6,6 +6,13 @@ v0.1.4 已发布（2026-11-28），收益按日志里的角色名归属、角色
 
 近期工作重心：等真实收艇样本反馈，按「未命中」与「未标明艇」两类问题补词表和归属判定。
 
+## STATUS-012：一次收艇的多笔记录改成一次提交（2026-11-28）
+
+- 起因：查「潜水舰能否同名」时发现落库是逐笔 `AddAsync`，一次保存拆成几笔时中途失败会留下半批，而提示只说「写账失败」。这跟同名无关，先修掉。
+- 改法：`ILootRecordRepository` 加 `AddRangeAsync`，SQLite 实现用单个事务循环插入；`RecordsPageViewModel.SaveAsync` 先建艇、再把所有记录一次性提交。`records.saveFailed` 文案补上「本次没有写入任何记录」。
+- 测试：`PersistenceSmokeTests.WritingSeveralRecordsAtOnceIsAllOrNothing`（两条同 ID 记录，第二笔必失败 → 断言库里一条都没有）。**先把它改成逐笔提交跑了一遍确认会挂**，再恢复。Domain 195 + Desktop 31 全过。
+- 潜水舰同名（`UNIQUE (character_id, name)`）暂不动：公开资料查不到权威说法，等玩家自己的艇回来后实测再决定。
+
 ## STATUS-011：名字匹配不再区分大小写（2026-11-28）
 
 - 用户问「角色首字母没大写会有匹配问题吗」，查下来确实有：`NameMatcher.Normalize` 只抹空格、比较走 `StringComparison.Ordinal`。手填 `tiina branford` 与游戏里的 `Tiina Branford` 差一个字，只能靠模糊匹配置信度捡回来并每次提示「读成…」；填成全大写就差 13 个字，直接判成「没见过的名字」——整批收益认不出角色，艇也会被当成新的再建一艘。

@@ -773,6 +773,8 @@ public sealed partial class RecordsPageViewModel : ObservableObject
             int records = 0;
             long total = 0;
 
+            List<Domain.Records.LootRecord> pending = [];
+
             // 一笔记录 = 一个角色 + 一艘艇：这两层都是统计的分组凭据，混在一起就没法各算各的了。
             var groups = included.GroupBy(x => (Character: x.CharacterId!.Value, x.SubmarineName));
 
@@ -804,11 +806,14 @@ public sealed partial class RecordsPageViewModel : ObservableObject
                     [.. group.Select(x => x.ToEntry())]);
 
                 record.SubmarineId = submarineId;
-                await _records.AddAsync(record).ConfigureAwait(true);
+                pending.Add(record);
 
                 records++;
                 total += record.TotalValue;
             }
+
+            // 全部记录一次提交：中途失败就一笔都不进，不会留下半批。
+            await _records.AddRangeAsync(pending).ConfigureAwait(true);
 
             string owners = Labels([.. included
                 .Select(x => x.SelectedCharacter)

@@ -68,6 +68,9 @@ internal static class Sample
 
         public Task AddAsync(LootRecord record, CancellationToken ct = default) => Task.CompletedTask;
 
+        public Task AddRangeAsync(IReadOnlyList<LootRecord> records, CancellationToken ct = default) =>
+            Task.CompletedTask;
+
         public Task DeleteAsync(Guid id, CancellationToken ct = default) => Task.CompletedTask;
     }
 

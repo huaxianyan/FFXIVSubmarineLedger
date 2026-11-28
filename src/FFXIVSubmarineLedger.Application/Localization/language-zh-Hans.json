@@ -129,7 +129,7 @@
   "records.nothingToSave": "没有可入账的行。",
   "records.unpricedBlocked": "还有 {0} 行没填单价（词表里没有的物名），填好再写账。",
   "records.saved": "已记入「{0}」：{1} · {2} 笔（按艇分开）· 合计 {3}",
-  "records.saveFailed": "写账失败：{0}",
+  "records.saveFailed": "写账失败，本次没有写入任何记录：{0}",
   "row.priceLabel": "@ {0} = {1}",
   "row.unknownPriceHint": "词表里没有，填单价后才入账",
   "stats.character": "角色",

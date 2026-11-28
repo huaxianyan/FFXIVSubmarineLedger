@@ -61,9 +61,29 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
 
     public Task AddAsync(LootRecord record, CancellationToken ct = default)
     {
+        ArgumentNullException.ThrowIfNull(record);
+        return AddRangeAsync([record], ct);
+    }
+
+    public Task AddRangeAsync(IReadOnlyList<LootRecord> records, CancellationToken ct = default)
+    {
+        ArgumentNullException.ThrowIfNull(records);
+
+        if (records.Count == 0)
+            return Task.CompletedTask;
+
         using SqliteConnection connection = database.Open();
         using SqliteTransaction transaction = connection.BeginTransaction();
 
+        foreach (LootRecord record in records)
+            Insert(connection, transaction, record);
+
+        transaction.Commit();
+        return Task.CompletedTask;
+    }
+
+    private static void Insert(SqliteConnection connection, SqliteTransaction transaction, LootRecord record)
+    {
         using (SqliteCommand command = connection.CreateCommand())
         {
             command.Transaction = transaction;
@@ -100,9 +120,6 @@ public sealed class SqliteLootRecordRepository(SqliteDatabase database) : ILootR
             command.Parameters.AddWithValue("$unknown", item.IsUnknown ? 1 : 0);
             command.ExecuteNonQuery();
         }
-
-        transaction.Commit();
-        return Task.CompletedTask;
     }
 
     public Task DeleteAsync(Guid id, CancellationToken ct = default)
