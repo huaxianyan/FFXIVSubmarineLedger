@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Input.Platform;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using FFXIVSubmarineLedger.Application.Abstractions;
 using FFXIVSubmarineLedger.Application.Characters;
 using FFXIVSubmarineLedger.Application.Errors;
 using FFXIVSubmarineLedger.Application.Localization;
@@ -12,7 +13,8 @@ namespace FFXIVSubmarineLedger.Desktop.ViewModels;
 
 public sealed partial class CharacterManagerViewModel(
     CharacterService characters,
-    SubmarineService submarines,
+    RosterEditor roster,
+    ISubmarineRepository submarines,
     Func<TopLevel?> topLevelProvider) : ObservableObject
 {
     [ObservableProperty]
@@ -40,8 +42,17 @@ public sealed partial class CharacterManagerViewModel(
     public async Task LoadAsync()
     {
         IReadOnlyList<Character> all = await characters.ListAsync(includeInactive: true).ConfigureAwait(true);
+
+        // 一次把全部艇取回来再按角色分组：角色不多，别为每张卡各跑一次查询。
+        IReadOnlyList<Submarine> everySubmarine = await submarines.ListAsync().ConfigureAwait(true);
+        var byCharacter = everySubmarine.ToLookup(x => x.CharacterId);
+
         Rows = new ObservableCollection<CharacterRowViewModel>(
             all.Select(x => new CharacterRowViewModel(x, this)));
+
+        foreach (CharacterRowViewModel row in Rows)
+            row.SetSubmarines([.. byCharacter[row.Id]]);
+
         HasCharacters = Rows.Count > 0;
         CountLabel = Rows.Count == 0 ? string.Empty : Loc.Format("characters.countLabel", Rows.Count);
     }
@@ -123,47 +134,24 @@ public sealed partial class CharacterManagerViewModel(
             : (line[..at].Trim(), line[(at + 1)..].Trim());
     }
 
-    public async Task RenameAsync(CharacterRowViewModel row, string name, string world)
+    /// <summary>
+    /// 保存整张角色卡：角色名、服务器、每艘艇的名字一起提交。
+    /// 任一名字不合法就退回去让人改，一个字节都不写。
+    /// </summary>
+    public async Task SaveAsync(CharacterRowViewModel row)
     {
         try
         {
-            await characters.RenameAsync(row.Id, name, world).ConfigureAwait(true);
+            await roster.SaveAsync(
+                    row.Id,
+                    row.EditName,
+                    row.EditWorld,
+                    [.. row.Submarines.Select(x => new RosterSubmarine(x.Id, x.EditName))])
+                .ConfigureAwait(true);
+
+            StatusMessage = Loc.Format("characters.rosterSaved", row.EditName.Trim());
             row.IsEditing = false;
-            StatusMessage = Loc.Format("characters.renamed", name.Trim());
             await LoadAsync().ConfigureAwait(true);
-        }
-        catch (ValidationException exception)
-        {
-            StatusMessage = exception.Message;
-        }
-    }
-
-    /// <summary>展开就打这个角色名下的艇拉一次；收起什么都不做。</summary>
-    public async Task ToggleSubmarinesAsync(CharacterRowViewModel row)
-    {
-        row.IsEditing = false;
-        row.IsExpanded = !row.IsExpanded;
-
-        if (!row.IsExpanded)
-            return;
-
-        IReadOnlyList<Submarine> all = await submarines.ListAsync(row.Id).ConfigureAwait(true);
-        row.SetSubmarines(all);
-    }
-
-    public async Task RenameSubmarineAsync(SubmarineRowViewModel row)
-    {
-        try
-        {
-            await submarines.RenameAsync(row.Id, row.CharacterId, row.EditName).ConfigureAwait(true);
-            StatusMessage = Loc.Format("characters.submarineRenamed", row.EditName.Trim());
-
-            // 名字改了要重拉：行里的 model 还是旧名字，不重建就对不上了。
-            if (Rows.FirstOrDefault(x => x.Id == row.CharacterId) is { } owner)
-            {
-                IReadOnlyList<Submarine> all = await submarines.ListAsync(owner.Id).ConfigureAwait(true);
-                owner.SetSubmarines(all);
-            }
         }
         catch (ValidationException exception)
         {

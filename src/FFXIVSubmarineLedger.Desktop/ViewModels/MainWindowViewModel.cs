@@ -21,7 +21,8 @@ public sealed partial class MainWindowViewModel : ObservableObject
 
         Characters = new CharacterManagerViewModel(
             composition.Characters,
-            composition.SubmarineNames,
+            composition.Roster,
+            composition.Submarines,
             topLevelProvider);
         Records = new RecordsPageViewModel(
             topLevelProvider,

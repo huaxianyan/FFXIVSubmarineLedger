@@ -40,27 +40,6 @@ public sealed class CharacterService(ICharacterRepository characters)
         return character;
     }
 
-    public async Task RenameAsync(Guid id, string name, string world, CancellationToken ct = default)
-    {
-        Character character = await RequireAsync(id, ct).ConfigureAwait(false);
-        name = name?.Trim() ?? string.Empty;
-        if (name.Length == 0)
-            throw new ValidationException(Loc.Get("validation.nameRequired"));
-
-        world = world?.Trim() ?? string.Empty;
-
-        // 同名同服的两个角色会让归属解析变成「分不清」，必须在写库前挡住。
-        IReadOnlyList<Character> existing = await characters.ListAsync(ct).ConfigureAwait(false);
-        if (existing.Any(x => x.Id != id
-                              && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
-                              && string.Equals(x.World, world, StringComparison.OrdinalIgnoreCase)))
-            throw new ValidationException(Loc.Format("validation.duplicate", name));
-
-        character.Name = name;
-        character.World = world;
-        await characters.UpdateAsync(character, ct).ConfigureAwait(false);
-    }
-
     public async Task SetActiveAsync(Guid id, bool isActive, CancellationToken ct = default)
     {
         Character character = await RequireAsync(id, ct).ConfigureAwait(false);

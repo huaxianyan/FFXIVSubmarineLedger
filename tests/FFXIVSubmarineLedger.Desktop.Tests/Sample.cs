@@ -30,7 +30,7 @@ internal static class Sample
 
     public static CharacterService Characters { get; } = new(new FakeCharacters());
 
-    public static SubmarineService Submarines { get; } = new(new FakeSubmarines());
+    public static RosterEditor Roster { get; } = new(new FakeCharacters(), new FakeSubmarines());
 
     private static List<LootRecord> CreateRecords()
     {

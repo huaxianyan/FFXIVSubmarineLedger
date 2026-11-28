@@ -34,7 +34,7 @@ public sealed class ApplicationComposition
         Settings = new SettingsService(settingsStore);
         Records = new SqliteLootRecordRepository(database);
         Submarines = new SqliteSubmarineRepository(database);
-        SubmarineNames = new SubmarineService(Submarines);
+        Roster = new RosterEditor(characterRepository, Submarines);
         Backup = new BackupService(new SqliteBackupStore(database));
 
         Version currentVersion = Assembly.GetEntryAssembly()?.GetName().Version ?? new Version(0, 1, 0);
@@ -62,8 +62,8 @@ public sealed class ApplicationComposition
 
     public CharacterService Characters { get; }
 
-    /// <summary>潜艇的业务规则（改名、按角色列出来）。</summary>
-    public SubmarineService SubmarineNames { get; }
+    /// <summary>角色卡整张保存（角色名 + 服务器 + 每艘艇的名字一起校验一起写）。</summary>
+    public RosterEditor Roster { get; }
 
     public SettingsService Settings { get; }
 

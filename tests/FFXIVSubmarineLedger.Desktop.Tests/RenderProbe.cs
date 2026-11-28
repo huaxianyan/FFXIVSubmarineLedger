@@ -51,19 +51,22 @@ public sealed class RenderProbe
         Render(new Views.SettingsPageView { DataContext = settings }, 1100, 950,
             Path.Combine(directory, $"{stem}-settings.png"));
 
-        // 角色页：编辑按钮、折叠的艇列表、展开后的每艘艇一行。
-        CharacterManagerViewModel roster = new(Sample.Characters, Sample.Submarines, () => null);
+        // 角色页：艇名横排显示；编辑时角色与艇一起改、一起存。
+        CharacterManagerViewModel roster = new(
+            Sample.Characters, Sample.Roster, Sample.SubmarineRepository, () => null);
         await roster.LoadAsync();
 
-        if (roster.Rows.FirstOrDefault() is { } rosterRow)
-            await roster.ToggleSubmarinesAsync(rosterRow);
-
-        Render(new Views.CharacterManagerView { DataContext = roster }, 1100, 900,
+        Render(new Views.CharacterManagerView { DataContext = roster }, 1100, 700,
             Path.Combine(directory, $"{stem}-characters.png"));
+
+        roster.Rows.FirstOrDefault()?.BeginEdit();
+        Render(new Views.CharacterManagerView { DataContext = roster }, 1100, 700,
+            Path.Combine(directory, $"{stem}-characters-edit.png"));
 
         // 收艇记账页的确认行：每一行带的艇归属确认与艇名提示，看是不是塞得下、有没有被挤掉。
         ItemCatalog catalog = ItemCatalog.Load();
-        CharacterManagerViewModel characters = new(Sample.Characters, Sample.Submarines, () => null);
+        CharacterManagerViewModel characters = new(
+            Sample.Characters, Sample.Roster, Sample.SubmarineRepository, () => null);
         await characters.LoadAsync();
 
         RecordsPageViewModel records = new(
