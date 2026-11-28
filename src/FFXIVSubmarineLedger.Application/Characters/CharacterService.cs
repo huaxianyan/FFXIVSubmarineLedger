@@ -19,6 +19,10 @@ public sealed class CharacterService(ICharacterRepository characters)
             : all.Where(x => x.IsActive).OrderBy(x => x.CreatedAt).ToList();
     }
 
+    /// <summary>
+    /// 只建角色，不碰艇。角色页走 <see cref="RosterEditor.AddAsync"/>——它能把 4 艘艇的名字一起登记。
+    /// 这里留着给「只要一个空角色」的场合（测试、脚本）。
+    /// </summary>
     public async Task<Character> AddAsync(string name, string world, CancellationToken ct = default)
     {
         name = name?.Trim() ?? string.Empty;
