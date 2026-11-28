@@ -20,6 +20,19 @@ public sealed class NameMatcherTests
         Assert.Empty(guess.NearNames);
     }
 
+    [Theory]
+    [InlineData("tiina branford")]
+    [InlineData("TIINA BRANFORD")]
+    [InlineData("TiinaBranford")]
+    [InlineData("tiina  branford")]
+    public void LetterCaseAndSpacingDoNotMakeANewName(string read)
+    {
+        NameGuess guess = NameMatcher.Guess(read, ["Tiina Branford"]);
+
+        Assert.Equal(NameMatchKind.Exact, guess.Kind);
+        Assert.Equal("Tiina Branford", guess.Name);
+    }
+
     [Fact]
     public void Guess_LeavesExactNamesAlone()
     {

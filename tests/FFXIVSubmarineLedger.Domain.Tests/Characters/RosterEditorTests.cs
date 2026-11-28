@@ -138,6 +138,38 @@ public sealed class RosterEditorTests
     }
 
     [Fact]
+    public async Task TreatsLetterCaseAndSpacesAsTheSameName()
+    {
+        FakeCharacters characters = new();
+        FakeSubmarines submarines = new();
+        Character character = characters.Add("Tiina Branford", "Titan");
+        Submarine blackberry = submarines.Add(character.Id, "Blackberry");
+        RosterEditor editor = new(characters, submarines);
+
+        // 玩家手填不会照抄游戏里的写法：大小写、空格不同都还是同一个名字。
+        foreach (string same in new[] { "blackberry", "Black berry", "BLACKBERRY" })
+        {
+            await Assert.ThrowsAsync<ValidationException>(() => editor.SaveAsync(
+                character.Id,
+                "Tiina Branford",
+                "Titan",
+                [new RosterSubmarine(blackberry.Id, "Blackberry"), new RosterSubmarine(null, same)]));
+        }
+    }
+
+    [Fact]
+    public async Task TreatsLetterCaseAsTheSameCharacter()
+    {
+        FakeCharacters characters = new();
+        FakeSubmarines submarines = new();
+        characters.Add("Tiina Branford", "Titan");
+        RosterEditor editor = new(characters, submarines);
+
+        await Assert.ThrowsAsync<ValidationException>(() => editor.AddAsync("tiina branford", "titan", []));
+        await Assert.ThrowsAsync<ValidationException>(() => editor.AddAsync("TIINA BRANFORD", "TITAN", []));
+    }
+
+    [Fact]
     public async Task RefusesToCreateTwoSubmarinesWithTheSameName()
     {
         FakeCharacters characters = new();

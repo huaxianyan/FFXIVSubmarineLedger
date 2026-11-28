@@ -6,6 +6,12 @@ v0.1.4 已发布（2026-11-28），收益按日志里的角色名归属、角色
 
 近期工作重心：等真实收艇样本反馈，按「未命中」与「未标明艇」两类问题补词表和归属判定。
 
+## STATUS-011：名字匹配不再区分大小写（2026-11-28）
+
+- 用户问「角色首字母没大写会有匹配问题吗」，查下来确实有：`NameMatcher.Normalize` 只抹空格、比较走 `StringComparison.Ordinal`。手填 `tiina branford` 与游戏里的 `Tiina Branford` 差一个字，只能靠模糊匹配置信度捡回来并每次提示「读成…」；填成全大写就差 13 个字，直接判成「没见过的名字」——整批收益认不出角色，艇也会被当成新的再建一艘。
+- 修法：比对键 `NameMatcher.NormalizeKey` = 去空格 + `ToLowerInvariant`，`Guess` 的精确判定与编辑距离都走它（返回的仍是库里那个原始大小写）。`RosterEditor` 的角色重名、艇名去重也用它，`Blackberry` 与 `blackberry` / `Black berry` 不能共存。另加一条防御：界面传了不完整的艇列表时，新填的名字不能撞上没出现在卡上的已有艇。
+- 测试：`NameMatcherTests.LetterCaseAndSpacingDoNotMakeANewName`（4 组，先红后绿）、`RosterEditorTests.TreatsLetterCaseAndSpacesAsTheSameName`、`TreatsLetterCaseAsTheSameCharacter`。Domain 194 + Desktop 31 全过。
+
 ## STATUS-010：发布 v0.1.4（2026-11-28）
 
 - 版本号 `Directory.Build.props` → `0.1.4`，发布说明 `docs/release-notes/v0.1.4.md`（新功能 5 条、问题修复 2 条，25 行，含 `blob/v0.1.4/` 链接）。

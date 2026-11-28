@@ -40,7 +40,7 @@
 - **艇名要先对回已有的艇，再落库**（2026-11-23 加）：OCR 把艇名读歪一个字就会凭空造出一艘艇。实测一次截图把 Blackberry 读成 Blackberrvy、Blueberry 读成 Blug5erry、Strawberry 读成 Strawberrv，一落库就多了三艘各一条记录的艇，按艇统计从此对不上。做法是 `Application/Records/SubmarineNameMatcher` 的两档阈值（都按名字长度缩）：唯一一艘落在「可以直接改写」那一档才改写；落在只宽一档的「给候选」范围里的一律改成未标明并把人叫过来选，既不猜也不新建；两档都不沾的才当新艇。8 字以下的艇名不自动改写——「Sub1」「Sub2」这种编号命名差一个字就是另一艘。识别完与落库前各刷一次角色名下的艇名，界面上的解析过期也不会造艇。
 - **角色按行归属，没有默认角色**（2026-11-28 改，之前是「默认角色/没默认取第一个」）。`JapaneseLogLineParser.TryTakeActorPrefix` 拆出「<角色名>は」里的角色名（`ActorNameLimit = 40`，顺带削掉敬称「さん」），`RecognizedLoot.CharacterName` 带着它一路走到确认行。`OwnershipResolver` 把读到的角色名对回已登记的角色，落库时按「**角色 + 艇**」分组，一个组合一笔记录——多角色同一天收艇各记各的。
 - **对不上就停下，不猜也不新建**：`NameMatcher` 两档阈值（唯一一个落在 `AutoDistance = 2` 内才自动改写；再宽一档只给候选），角色名读歪一个字（`Tilna` → `Tiina`）会改写并标出来，像但不是唯一/没登记过/同名不同服的都置空等人在行内选。有任一行没选角色就不许入账（`CanSave`），因为静默算到别人头上比不入账更糟。
-- **比对前抹掉空格**：整行在解析入口就削了空白（OCR 常在字间插空），角色名会变成 `TiinaBranford`，所以 `NameMatcher.Normalize` 两边都去空格再比。
+- **比对前抹空格、统一小写**（`NameMatcher.NormalizeKey`）：整行在解析入口就削了空白（OCR 常在字间插空），角色名会变成 `TiinaBranford`；玩家手填也不会照抄游戏里的写法，`tiina branford` / `TIINA BRANFORD` 都很正常。按大小写敏感去比，前者只是「读歪一个字」要反复提示，后者会被当成没见过的名字——整批收益认不出角色，艇还会被当成新的再建一艘。角色页查重（角色名、艇名）用同一个口径，`RosterEditor` 不会让 `Blackberry` 和 `blackberry` 同时存在。
 - 合并键是「`ItemId` + 品质」，词表外物名用物名当键（否则不同未知物因 `ItemId` 都是 0 会被并成一条）。数量为 0 的行丢弃。
 - 写完清场（清图、清行）。记录可在统计页看与删。
 - 识别结果必须人工确认后才落库。

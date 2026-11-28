@@ -1,6 +1,7 @@
 using FFXIVSubmarineLedger.Application.Abstractions;
 using FFXIVSubmarineLedger.Application.Errors;
 using FFXIVSubmarineLedger.Application.Localization;
+using FFXIVSubmarineLedger.Application.Names;
 using FFXIVSubmarineLedger.Domain.Characters;
 
 namespace FFXIVSubmarineLedger.Application.Characters;
@@ -35,7 +36,7 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
             throw new ValidationException(Loc.Get("validation.nameRequired"));
 
         IReadOnlyList<Character> all = await characters.ListAsync(ct).ConfigureAwait(false);
-        if (all.Any(x => Equals(x.Name, name) && Equals(x.World, world)))
+        if (all.Any(x => SameName(x.Name, name) && SameName(x.World, world)))
             throw new ValidationException(Loc.Format("validation.duplicate", name));
 
         string[] taken = CheckSubmarineNames(submarineNames);
@@ -74,9 +75,7 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
             ?? throw new ValidationException(Loc.Get("validation.characterMissing"));
 
         // 同名同服的两个角色会让归属解析变成「分不清」，必须在写库前挡住。
-        if (all.Any(x => x.Id != characterId
-                         && string.Equals(x.Name, name, StringComparison.OrdinalIgnoreCase)
-                         && string.Equals(x.World, world, StringComparison.OrdinalIgnoreCase)))
+        if (all.Any(x => x.Id != characterId && SameName(x.Name, name) && SameName(x.World, world)))
             throw new ValidationException(Loc.Format("validation.duplicate", name));
 
         IReadOnlyList<Submarine> existing = await submarines.ListAsync(characterId, ct).ConfigureAwait(false);
@@ -96,6 +95,17 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
         }
 
         CheckSubmarineNames([.. roster.Select(x => x.Name)]);
+
+        // 防御界面传了不完整的列表：新填的名字不能撞上没出现在卡上的已有艇。
+        HashSet<Guid> listed = [.. roster.Where(x => x.Id is not null).Select(x => x.Id!.Value)];
+        foreach (RosterSubmarine item in roster)
+        {
+            if (item.Id is not null)
+                continue;
+
+            if (existing.Any(x => !listed.Contains(x.Id) && SameName(x.Name, item.Name)))
+                throw new ValidationException(Loc.Format("validation.submarineDuplicate", item.Name.Trim()));
+        }
 
         Dictionary<Guid, string> renames = [];
         foreach (RosterSubmarine item in roster)
@@ -138,6 +148,10 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
         }
     }
 
+    /// <summary>名字是否同一个：与归属解析同一个口径（去空格、不分大小写）。</summary>
+    private static bool SameName(string left, string right) =>
+        string.Equals(NameMatcher.NormalizeKey(left), NameMatcher.NormalizeKey(right), StringComparison.Ordinal);
+
     /// <summary>
     /// 检查一批艇名：空着的跳过（还没起名），有名字的必须互不重复。
     /// 返回去空白后的名字，保持原来的顺序。
@@ -145,7 +159,7 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
     private static string[] CheckSubmarineNames(IReadOnlyList<string> names)
     {
         List<string> result = [];
-        HashSet<string> seen = new(StringComparer.Ordinal);
+        HashSet<string> seen = new(StringComparer.Ordinal);   // 存的已经是规范化后的键
 
         foreach (string raw in names)
         {
@@ -153,7 +167,7 @@ public sealed class RosterEditor(ICharacterRepository characters, ISubmarineRepo
             if (submarineName.Length == 0)
                 continue;
 
-            if (!seen.Add(submarineName))
+            if (!seen.Add(NameMatcher.NormalizeKey(submarineName)))
                 throw new ValidationException(Loc.Format("validation.submarineDuplicate", submarineName));
 
             result.Add(submarineName);

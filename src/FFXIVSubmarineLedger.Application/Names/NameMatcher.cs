@@ -53,18 +53,17 @@ public static class NameMatcher
         if (string.IsNullOrEmpty(read))
             return new NameGuess(null, NameMatchKind.Missing, []);
 
-        // 识别出来的名字里常有 OCR 插进去的空格（「Black berry」），比对前先抹掉。
-        string readKey = Normalize(read);
+        string readKey = NormalizeKey(read);
 
-        if (known.FirstOrDefault(name => Normalize(name).Equals(readKey, StringComparison.Ordinal)) is { } same)
+        if (known.FirstOrDefault(name => NormalizeKey(name).Equals(readKey, StringComparison.Ordinal)) is { } same)
             return new NameGuess(same, NameMatchKind.Exact, []);
 
         List<(string Name, int Distance)> scored =
         [
             .. known
                 .Distinct(StringComparer.Ordinal)
-                .Select(name => (Name: name, Distance: TextDistance.Levenshtein(readKey, Normalize(name))))
-                .Where(x => x.Distance <= HintLimit(Normalize(x.Name)))
+                .Select(name => (Name: name, Distance: TextDistance.Levenshtein(readKey, NormalizeKey(name))))
+                .Where(x => x.Distance <= HintLimit(NormalizeKey(x.Name)))
                 .OrderBy(x => x.Distance)
                 .ThenBy(x => x.Name, StringComparer.Ordinal),
         ];
@@ -75,15 +74,25 @@ public static class NameMatcher
         int best = scored[0].Distance;
         List<string> nearest = [.. scored.Where(x => x.Distance == best).Select(x => x.Name)];
 
-        if (nearest.Count == 1 && best <= AutoLimit(nearest[0]))
+        if (nearest.Count == 1 && best <= AutoLimit(NormalizeKey(nearest[0])))
             return new NameGuess(nearest[0], NameMatchKind.Corrected, []);
 
         return new NameGuess(null, NameMatchKind.Ambiguous, [.. scored.Select(x => x.Name)]);
     }
 
-    private static string Normalize(string name) =>
+    /// <summary>
+    /// 比对用的键：**抹掉空格、统一小写**。
+    ///
+    /// 两件事都得做。空格是因为整行在解析入口就削了空白（OCR 常在字间插空），
+    /// 名字到这儿会变成 <c>TiinaBranford</c>；大小写是因为玩家手填时不会照抄游戏里的
+    /// <c>Tiina Branford</c>，填成 <c>tiina branford</c> 甚至全大写都很正常——
+    /// 按大小写敏感去比，前者只是「读歪一个字」要反复提示，后者会被当成从没见过的名字，
+    /// 整批收益都认不出角色、艇还会被当成新的再建一艘。
+    /// </summary>
+    public static string NormalizeKey(string name) =>
         name.Replace(" ", string.Empty, StringComparison.Ordinal)
-            .Replace("　", string.Empty, StringComparison.Ordinal);
+            .Replace("　", string.Empty, StringComparison.Ordinal)
+            .ToLowerInvariant();
 
     /// <summary>
     /// 可以直接改写到这个名字的差异上限。8 字以下根本不自动改写：FFXIV 里
