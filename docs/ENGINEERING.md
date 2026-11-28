@@ -68,6 +68,7 @@
 
 ## 启动、诊断与外部干扰
 
+- **建表必须在组合根里、读设置之前**（2026-11-28 修）：界面语言在开窗前就要定下来，所以要读设置；而设置存在 `settings` 表里。建表如果排在组合根构造之后，全新安装必然在第一次启动就报 `no such table: settings`（v0.1.0–v0.1.2 三个版本都是这样，开发机上因为库早就建好了所以看不出来）。现在 `ApplicationComposition` 构造的第一件事就是 `database.Initialize()`，`App.axaml.cs` 里不再重复调。回归测试在 `Desktop.Tests/FreshInstallTests`：空目录能装配、同一目录能装配两次。
 - **启动顺序、单实例与诊断**：窗口先建、先显示，再去开数据库（库里被占着时开库会等锁，那段时间若窗口还没建，用户看到的就是「进程在跑、界面不出来」）。有单实例互斥，第二个进程把已有窗口叫到前台后退出。启动路径每一步都写 `%LocalAppData%\FFXIVSubmarineLedger\logs\startup.log`（含 pid），致命错误弹系统消息框而不是静默退出，另有 20 秒看门狗。SQLite `DefaultTimeout=5`，库被锁时快点报错，不干等。
 - **软件渲染开关**：`--software-render` 或环境变量 `FFXIVSUB_SOFTWARE_RENDER=1`。显卡驱动初始化挂住时用它绕过。
 - **MacType 会弄死这个程序**：MacType 钩 GDI/DirectWrite，Avalonia 的字体与渲染初始化正好走那条路，被挂钩后卡死在平台初始化（`AppBuilder 已构建` 之后、`App.Initialize` 之前），表现是「进程在跑、窗口不出来」。**改 exe 名字后必须把新名字加进 MacType 的排除列表**——2026-10-28 从 FFXIVSubLedger.exe 改名成 FFXIVSubmarineLedger.exe 后，旧排除规则失效，用户就撞上了。排查时先看 `logs/startup.log` 停在哪一步，卡在 `AppBuilder 已构建 → App.Initialize` 之间基本就是这类外部字体/渲染钩子。

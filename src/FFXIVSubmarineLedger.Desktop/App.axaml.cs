@@ -39,7 +39,6 @@ public partial class App : Avalonia.Application
                 try
                 {
                     composition = await Task.Run(ApplicationComposition.Create).ConfigureAwait(true);
-                    composition.Database.Initialize();
                     StartupDiagnostics.Record("数据库就绪");
                 }
                 catch (Exception exception)

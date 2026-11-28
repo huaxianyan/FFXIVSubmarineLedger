@@ -23,6 +23,10 @@ public sealed class ApplicationComposition
         Database = database;
         DataDirectory = dataDirectory;
 
+        // 建表必须赶在下面读设置之前：设置存在 settings 表里，全新安装时这个表还不存在，
+        // 先读就是 “no such table: settings”，程序连开都开不了（v0.1.2 之前每个版本都这样）。
+        database.Initialize();
+
         ICharacterRepository characterRepository = new SqliteCharacterRepository(database);
         ISettingsStore settingsStore = new SqliteSettingsStore(database);
 
@@ -75,7 +79,12 @@ public sealed class ApplicationComposition
         // 程序改过名：旧目录里的账要跟着搬到新目录，否则用户会以为数据丢了。
         WindowsPaths.MigrateLegacyDataDirectory();
 
-        string dataDirectory = WindowsPaths.DefaultDataDirectory();
+        return Create(WindowsPaths.DefaultDataDirectory());
+    }
+
+    /// <summary>指定数据目录装配一套（测试用；生产走 <see cref="Create()"/>）。</summary>
+    public static ApplicationComposition Create(string dataDirectory)
+    {
         SqliteDatabase database = new(WindowsPaths.DatabasePath(dataDirectory));
         return new ApplicationComposition(database, dataDirectory);
     }
